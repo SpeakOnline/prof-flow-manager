@@ -1,0 +1,143 @@
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Users, Search, UserPlus, Eye } from "lucide-react";
+
+interface Teacher {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  level: 'Júnior' | 'Pleno' | 'Sênior';
+  hasCertification: boolean;
+  createdAt: Date;
+}
+
+// Dados mockados
+const mockTeachers: Teacher[] = [
+  {
+    id: '1',
+    name: 'Ana Silva',
+    email: 'ana.silva@escola.com',
+    phone: '(11) 99999-1111',
+    level: 'Sênior',
+    hasCertification: true,
+    createdAt: new Date('2023-01-15')
+  },
+  {
+    id: '2',
+    name: 'Carlos Santos',
+    email: 'carlos.santos@escola.com',
+    phone: '(11) 99999-2222',
+    level: 'Pleno',
+    hasCertification: false,
+    createdAt: new Date('2023-03-20')
+  },
+  {
+    id: '3',
+    name: 'Maria Oliveira',
+    email: 'maria.oliveira@escola.com',
+    phone: '(11) 99999-3333',
+    level: 'Júnior',
+    hasCertification: true,
+    createdAt: new Date('2023-06-10')
+  }
+];
+
+export const TeachersView = () => {
+  const [teachers, setTeachers] = useState<Teacher[]>(mockTeachers);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredTeachers = teachers.filter(teacher =>
+    teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    teacher.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getLevelColor = (level: Teacher['level']) => {
+    switch (level) {
+      case 'Júnior':
+        return 'bg-status-free text-status-free-foreground';
+      case 'Pleno':
+        return 'bg-status-occupied text-status-occupied-foreground';
+      case 'Sênior':
+        return 'bg-primary text-primary-foreground';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Professores</h1>
+          <p className="text-muted-foreground">Gerencie o cadastro dos professores</p>
+        </div>
+        <Button className="bg-gradient-primary">
+          <UserPlus className="mr-2 h-4 w-4" />
+          Novo Professor
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            Lista de Professores
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar professor por nome ou email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4">
+            {filteredTeachers.map((teacher) => (
+              <Card key={teacher.id} className="transition-smooth hover:shadow-custom-md">
+                <CardContent className="flex items-center justify-between p-4">
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {teacher.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div>
+                      <h3 className="font-semibold text-foreground">{teacher.name}</h3>
+                      <p className="text-sm text-muted-foreground">{teacher.email}</p>
+                      <p className="text-sm text-muted-foreground">{teacher.phone}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Badge className={getLevelColor(teacher.level)}>
+                      {teacher.level}
+                    </Badge>
+                    
+                    {teacher.hasCertification && (
+                      <Badge variant="secondary">
+                        Certificado
+                      </Badge>
+                    )}
+
+                    <Button variant="outline" size="sm">
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
