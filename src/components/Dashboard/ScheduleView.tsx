@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Clock, Save } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ScheduleViewProps {
   user: {
@@ -46,6 +47,7 @@ export const ScheduleView = ({ user }: ScheduleViewProps) => {
     status: 'free' as ScheduleSlot['status'],
     studentName: ''
   });
+  const isMobile = useIsMobile();
 
   const handleSlotClick = (day: string, slot: ScheduleSlot) => {
     setSelectedSlot({ day, slot });
@@ -81,12 +83,17 @@ export const ScheduleView = ({ user }: ScheduleViewProps) => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" />
-            {user.role === 'admin' ? 'Agenda Geral' : 'Minha Agenda'}
+          <CardTitle className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center space-x-2">
+              <Clock className="h-5 w-5 text-primary" />
+              {user.role === 'admin' ? 'Agenda Geral' : 'Minha Agenda'}
+            </div>
+            <Button size="sm" variant="outline" className={isMobile ? "w-full mt-2" : ""}>
+              Imprimir
+            </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 sm:px-6">
           <ScheduleGrid 
             schedule={schedule}
             onSlotClick={handleSlotClick}
@@ -96,7 +103,7 @@ export const ScheduleView = ({ user }: ScheduleViewProps) => {
       </Card>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className={isMobile ? "w-[90vw] max-w-[90vw] sm:max-w-[425px]" : ""}>
           <DialogHeader>
             <DialogTitle>Editar Horário</DialogTitle>
           </DialogHeader>
@@ -136,7 +143,7 @@ export const ScheduleView = ({ user }: ScheduleViewProps) => {
                 </div>
               )}
 
-              <Button onClick={handleSaveSlot} className="w-full">
+              <Button onClick={handleSaveSlot} className={isMobile ? "w-full" : "w-full"}>
                 <Save className="mr-2 h-4 w-4" />
                 Salvar Alterações
               </Button>

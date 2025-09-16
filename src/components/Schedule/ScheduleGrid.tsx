@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface ScheduleSlot {
   id: string;
@@ -49,8 +50,9 @@ const getStatusLabel = (status: ScheduleSlot['status']) => {
 };
 
 export const ScheduleGrid = ({ schedule, onSlotClick, readOnly = false }: ScheduleGridProps) => {
+  const isMobile = useIsMobile();
   return (
-    <div className="grid grid-cols-5 gap-4">
+    <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5'} gap-4`}>
       {days.map((day) => (
         <div key={day.key} className="space-y-2">
           <h3 className="text-sm font-semibold text-center p-2 bg-muted rounded-md">

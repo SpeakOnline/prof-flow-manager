@@ -6,6 +6,7 @@ import { TeachersView } from "./TeachersView";
 import { SearchView } from "./SearchView";
 import { ProfileView } from "./ProfileView";
 import { SpecialListsView } from "./SpecialListsView";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DashboardProps {
   user: {
@@ -21,6 +22,7 @@ interface DashboardProps {
 
 export const Dashboard = ({ user }: DashboardProps) => {
   const [activeTab, setActiveTab] = useState('schedule');
+  const isMobile = useIsMobile();
 
   const handleLogout = () => {
     // Implementar logout
@@ -48,14 +50,14 @@ export const Dashboard = ({ user }: DashboardProps) => {
     <div className="min-h-screen bg-background">
       <Header user={user} onLogout={handleLogout} />
       
-      <div className="flex">
+      <div className="flex relative">
         <Sidebar 
           userRole={user.role}
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
         
-        <main className="flex-1 p-6">
+        <main className={`flex-1 p-6 ${isMobile ? 'w-full' : 'ml-0'}`}>
           {renderContent()}
         </main>
       </div>

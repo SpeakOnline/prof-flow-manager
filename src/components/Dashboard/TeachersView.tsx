@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Users, Search, UserPlus, Eye } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Teacher {
   id: string;
@@ -50,6 +51,7 @@ const mockTeachers: Teacher[] = [
 export const TeachersView = () => {
   const [teachers, setTeachers] = useState<Teacher[]>(mockTeachers);
   const [searchTerm, setSearchTerm] = useState('');
+  const isMobile = useIsMobile();
 
   const filteredTeachers = teachers.filter(teacher =>
     teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -69,25 +71,25 @@ export const TeachersView = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className={`flex ${isMobile ? 'flex-col' : 'items-center justify-between'} gap-4`}>
         <div>
           <h1 className="text-2xl font-bold text-foreground">Professores</h1>
           <p className="text-muted-foreground">Gerencie o cadastro dos professores</p>
         </div>
-        <Button className="bg-gradient-primary">
+        <Button className="bg-gradient-primary w-full md:w-auto">
           <UserPlus className="mr-2 h-4 w-4" />
           Novo Professor
         </Button>
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="space-y-4">
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
             Lista de Professores
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
+          <div className="flex flex-col md:flex-row items-center gap-2">
+            <div className="relative w-full">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar professor por nome ou email..."
@@ -99,25 +101,25 @@ export const TeachersView = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredTeachers.map((teacher) => (
               <Card key={teacher.id} className="transition-smooth hover:shadow-custom-md">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center space-x-4">
+                <CardContent className={`flex ${isMobile ? 'flex-col' : 'items-center justify-between'} p-4 ${isMobile ? 'gap-3' : 'gap-4'}`}>
+                  <div className={`flex items-center ${isMobile ? 'space-x-3' : 'space-x-4'} w-full`}>
                     <Avatar className="h-12 w-12">
                       <AvatarFallback className="bg-primary text-primary-foreground">
                         {teacher.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
                     
-                    <div>
-                      <h3 className="font-semibold text-foreground">{teacher.name}</h3>
-                      <p className="text-sm text-muted-foreground">{teacher.email}</p>
-                      <p className="text-sm text-muted-foreground">{teacher.phone}</p>
+                    <div className="overflow-hidden">
+                      <h3 className="font-semibold text-foreground truncate">{teacher.name}</h3>
+                      <p className="text-sm text-muted-foreground truncate">{teacher.email}</p>
+                      <p className="text-sm text-muted-foreground truncate">{teacher.phone}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className={`flex ${isMobile ? 'w-full justify-between flex-wrap' : 'items-center'} gap-2`}>
                     <Badge className={getLevelColor(teacher.level)}>
                       {teacher.level}
                     </Badge>
@@ -128,8 +130,9 @@ export const TeachersView = () => {
                       </Badge>
                     )}
 
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="flex-shrink-0">
                       <Eye className="h-4 w-4" />
+                      {isMobile && <span className="ml-2">Detalhes</span>}
                     </Button>
                   </div>
                 </CardContent>

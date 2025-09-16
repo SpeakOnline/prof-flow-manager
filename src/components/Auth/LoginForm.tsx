@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, LogIn } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface LoginFormProps {
   onLogin: (credentials: { email: string; password: string; role: 'admin' | 'teacher' }) => void;
@@ -16,6 +17,7 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const isMobile = useIsMobile();
 
   // Usuários demo para teste
   const demoUsers = [
@@ -72,10 +74,10 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <Calendar className="h-10 w-10 text-primary" />
+            <Calendar className="h-8 w-8 md:h-10 md:w-10 text-primary" />
             <div>
-              <h1 className="text-2xl font-bold text-foreground">AgendaPro</h1>
-              <p className="text-sm text-muted-foreground">Sistema de Gestão</p>
+              <h1 className="text-xl md:text-2xl font-bold text-foreground">AgendaPro</h1>
+              <p className="text-xs md:text-sm text-muted-foreground">Sistema de Gestão</p>
             </div>
           </div>
         </div>
@@ -128,19 +130,21 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
             </div>
 
             <div className="space-y-2">
-              {demoUsers.map((user, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => handleDemoLogin(user)}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span>{user.name}</span>
-                    <Badge variant="secondary">{user.label}</Badge>
-                  </div>
-                </Button>
-              ))}
+              <p className="text-sm text-center text-muted-foreground">Ou faça login com uma conta demo:</p>
+              <div className={`${isMobile ? 'flex flex-col space-y-2' : 'flex space-x-2'}`}>
+                {demoUsers.map(user => (
+                  <Button
+                    key={user.email}
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => handleDemoLogin(user)}
+                  >
+                    {user.label}
+                    <Badge variant="secondary" className="ml-2">{user.role === 'admin' ? 'Admin' : 'Prof'}</Badge>
+                  </Button>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
