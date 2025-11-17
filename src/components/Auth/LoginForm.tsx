@@ -6,18 +6,21 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, LogIn } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { loginSchema } from "@/lib/validators";
+import { z } from "zod";
 
-interface LoginFormProps {
-  onLogin: (credentials: { email: string; password: string; role: 'admin' | 'teacher' }) => void;
-}
-
-export const LoginForm = ({ onLogin }: LoginFormProps) => {
+export const LoginForm = () => {
   const [credentials, setCredentials] = useState({
     email: '',
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const isMobile = useIsMobile();
+  const { signIn } = useAuth();
+  const { toast } = useToast();
 
   // Usuários demo para teste
   const demoUsers = [
@@ -37,36 +40,67 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
     }
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
     setIsLoading(true);
 
-    // Simular autenticação
-    setTimeout(() => {
-      const user = demoUsers.find(
-        u => u.email === credentials.email && u.password === credentials.password
-      );
+    try {
+      // Validar credenciais com Zod
+      const validatedData = loginSchema.parse({
+        email: credentials.email,
+        password: credentials.password,
+      });
 
-      if (user) {
-        onLogin({
-          email: user.email,
-          password: credentials.password,
-          role: user.role
+      // Autenticação real com Supabase
+      await signIn(validatedData.email, validatedData.password);
+
+      toast({
+        title: 'Login realizado',
+        description: 'Bem-vindo ao AgendaPro!',
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        // Erros de validação
+        const fieldErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0].toString()] = err.message;
+          }
         });
-      } else {
-        alert('Credenciais inválidas');
+        setErrors(fieldErrors);
+      } else if (error instanceof Error) {
+        // Erros de autenticação
+        toast({
+          title: 'Erro no login',
+          description: error.message || 'Credenciais inválidas',
+          variant: 'destructive',
+        });
       }
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  const handleDemoLogin = (user: typeof demoUsers[0]) => {
+  const handleDemoLogin = async (user: typeof demoUsers[0]) => {
     setCredentials({ email: user.email, password: user.password });
-    onLogin({
-      email: user.email,
-      password: user.password,
-      role: user.role
-    });
+    setIsLoading(true);
+
+    try {
+      await signIn(user.email, user.password);
+      toast({
+        title: 'Login demo realizado',
+        description: `Bem-vindo, ${user.name}!`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro no login demo',
+        description: error instanceof Error ? error.message : 'Erro ao fazer login',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -94,10 +128,19 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
                   id="email"
                   type="email"
                   value={credentials.email}
-                  onChange={(e) => setCredentials(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) => {
+                    setCredentials(prev => ({ ...prev, email: e.target.value }));
+                    if (errors.email) {
+                      setErrors(prev => ({ ...prev, email: '' }));
+                    }
+                  }}
                   placeholder="seu@email.com"
+                  className={errors.email ? 'border-destructive' : ''}
                   required
                 />
+                {errors.email && (
+                  <p className="text-sm text-destructive mt-1">{errors.email}</p>
+                )}
               </div>
 
               <div>
@@ -106,10 +149,19 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
                   id="password"
                   type="password"
                   value={credentials.password}
-                  onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
+                  onChange={(e) => {
+                    setCredentials(prev => ({ ...prev, password: e.target.value }));
+                    if (errors.password) {
+                      setErrors(prev => ({ ...prev, password: '' }));
+                    }
+                  }}
                   placeholder="Sua senha"
+                  className={errors.password ? 'border-destructive' : ''}
                   required
                 />
+                {errors.password && (
+                  <p className="text-sm text-destructive mt-1">{errors.password}</p>
+                )}
               </div>
 
               <Button type="submit" className="w-full" disabled={isLoading}>
@@ -151,7 +203,7 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
 
         <div className="text-center">
           <p className="text-xs text-muted-foreground">
-            Para conectar autenticação real, configure o Supabase
+            Autenticação integrada com Supabase
           </p>
         </div>
       </div>
