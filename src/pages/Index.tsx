@@ -1,8 +1,8 @@
-import { useState } from "react";
 import { Dashboard } from "@/components/Dashboard/Dashboard";
 import { LoginForm } from "@/components/Auth/LoginForm";
+import { useAuth } from "@/hooks/useAuth";
 
-// Definir tipo User
+// Definir tipo User para compatibilidade com Dashboard
 type User = {
   id: string;
   name: string;
@@ -13,43 +13,26 @@ type User = {
   hasCertification: boolean;
 };
 
-// Usuários mockados para demonstração
-const mockUsers: Record<string, User> = {
-  'admin@escola.com': {
-    id: '1',
-    name: 'Ana Silva',
-    email: 'admin@escola.com',
-    role: 'admin',
-    phone: '(11) 99999-1111',
-    level: 'Sênior',
-    hasCertification: true
-  },
-  'professor@escola.com': {
-    id: '2',
-    name: 'Carlos Santos',
-    email: 'professor@escola.com',
-    role: 'teacher',
-    phone: '(11) 99999-2222',
-    level: 'Pleno',
-    hasCertification: false
-  }
-};
-
 const Index = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, profile, isAdmin, isTeacher } = useAuth();
 
-  const handleLogin = (credentials: { email: string; password: string; role: 'admin' | 'teacher' }) => {
-    const userData = mockUsers[credentials.email];
-    if (userData) {
-      setUser(userData);
-    }
+  // Se não há usuário autenticado, mostrar login
+  if (!user || !profile) {
+    return <LoginForm />;
+  }
+
+  // Criar objeto User compatível com Dashboard a partir do profile
+  const dashboardUser: User = {
+    id: user.id,
+    name: profile.name || 'Usuário',
+    email: profile.email || user.email || '',
+    role: isAdmin ? 'admin' : 'teacher',
+    phone: profile.phone || '',
+    level: profile.level || 'intermediario',
+    hasCertification: profile.has_certification || false,
   };
 
-  if (!user) {
-    return <LoginForm onLogin={handleLogin} />;
-  }
-
-  return <Dashboard user={user} />;
+  return <Dashboard user={dashboardUser} />;
 };
 
 export default Index;
