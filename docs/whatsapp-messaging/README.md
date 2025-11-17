@@ -35,7 +35,7 @@ Esta documentação descreve a implementação completa da funcionalidade de men
 
 ## 📚 Documentação
 
-Esta funcionalidade está documentada em 4 documentos principais:
+Esta funcionalidade está documentada em 5 documentos principais:
 
 ### 1️⃣ [Arquitetura](./01-ARQUITETURA.md)
 **O que você vai encontrar:**
@@ -93,6 +93,50 @@ Esta funcionalidade está documentada em 4 documentos principais:
 - Para fazer deploy em produção
 - Ao resolver problemas
 - Para configurar CI/CD
+
+### 5️⃣ [Alternativas de Integração](./05-ALTERNATIVAS.md) ⭐ NOVO
+**O que você vai encontrar:**
+- Comparação de 8+ soluções (Chatwoot, WAHA, Twilio, Evolution API, etc.)
+- Análise de custos e benefícios
+- Tabelas comparativas de features
+- Guias de implementação para cada alternativa
+- Matriz de decisão
+- Recomendações por caso de uso
+
+**Quando usar:**
+- **Antes de começar a implementação** (escolher a melhor solução)
+- Ao avaliar alternativas mais baratas
+- Se precisar de mensagens livres (sem templates)
+- Para comparar soluções oficiais vs não-oficiais
+- Ao considerar plataformas completas (Chatwoot)
+
+---
+
+## 🤔 Qual Solução de WhatsApp Escolher?
+
+Existem **diversas alternativas** para integrar WhatsApp. Antes de começar, consulte nosso [**Guia de Alternativas**](./05-ALTERNATIVAS.md) para escolher a melhor opção:
+
+### Comparação Rápida
+
+| Solução | Oficial | Custo/mês | Melhor Para |
+|---------|---------|-----------|-------------|
+| **WhatsApp Business API** ⭐ | ✅ Sim | $10-50 | Produção, compliance |
+| **Chatwoot** | ✅ Sim | $40-100 | Atendimento multi-agente |
+| **WAHA** | ❌ Não | $5-20 | Protótipos, MVP |
+| **Twilio** | ✅ Sim | $50-200 | Fácil integração |
+| **Evolution API** | ❌ Não | $10-30 | Projetos brasileiros |
+
+⭐ **Nossa recomendação**: WhatsApp Business API (documentado aqui)
+
+📖 **Ver comparação completa:** [05-ALTERNATIVAS.md](./05-ALTERNATIVAS.md)
+
+### Quando Considerar Alternativas?
+
+- 💰 **Orçamento muito limitado** → WAHA ou Evolution API
+- 👥 **Equipe de atendimento** → Chatwoot
+- 📝 **Mensagens livres (sem templates)** → WAHA, Evolution API
+- 🚀 **Implementação rápida** → Twilio
+- 🤖 **Automações complexas** → N8N + WhatsApp
 
 ---
 

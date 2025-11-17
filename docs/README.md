@@ -16,6 +16,7 @@ Sistema completo de mensagens via WhatsApp Business API para comunicação com a
 - [💻 Guia de Implementação](./whatsapp-messaging/02-GUIA-IMPLEMENTACAO.md) - Passo a passo técnico
 - [🔌 API e Integração](./whatsapp-messaging/03-API-INTEGRACAO.md) - Documentação de APIs
 - [🚀 Configuração e Deploy](./whatsapp-messaging/04-CONFIGURACAO-DEPLOYMENT.md) - Setup e produção
+- [🔄 Alternativas](./whatsapp-messaging/05-ALTERNATIVAS.md) - Comparação de soluções (Chatwoot, WAHA, etc.)
 
 **Status:** 📝 Documentado (implementação pendente)
 
@@ -25,12 +26,14 @@ Sistema completo de mensagens via WhatsApp Business API para comunicação com a
 
 ### Para Desenvolvedores
 
+- [**Escolher Solução WhatsApp**](./whatsapp-messaging/05-ALTERNATIVAS.md) ⭐ Comece aqui!
 - [Começar com WhatsApp](./whatsapp-messaging/02-GUIA-IMPLEMENTACAO.md)
 - [Arquitetura do Sistema](./whatsapp-messaging/01-ARQUITETURA.md)
 - [Exemplos de Código](./whatsapp-messaging/03-API-INTEGRACAO.md#exemplos-de-uso)
 
 ### Para Administradores
 
+- [**Comparar Alternativas**](./whatsapp-messaging/05-ALTERNATIVAS.md) ⭐ Leia antes!
 - [Configurar WhatsApp Business](./whatsapp-messaging/04-CONFIGURACAO-DEPLOYMENT.md#whatsapp-business-api-setup)
 - [Criar Templates](./whatsapp-messaging/03-API-INTEGRACAO.md#templates)
 - [Deploy em Produção](./whatsapp-messaging/04-CONFIGURACAO-DEPLOYMENT.md#deploy-em-produção)
@@ -80,7 +83,8 @@ docs/
     ├── 01-ARQUITETURA.md        # Arquitetura
     ├── 02-GUIA-IMPLEMENTACAO.md # Implementação
     ├── 03-API-INTEGRACAO.md     # APIs
-    └── 04-CONFIGURACAO-DEPLOYMENT.md  # Deploy
+    ├── 04-CONFIGURACAO-DEPLOYMENT.md  # Deploy
+    └── 05-ALTERNATIVAS.md       # Comparação de soluções
 ```
 
 ---
