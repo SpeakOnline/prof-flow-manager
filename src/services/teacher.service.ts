@@ -55,6 +55,31 @@ export async function getTeacherById(id: string): Promise<Teacher> {
 }
 
 /**
+ * Busca um professor pelo user_id (ID do auth.users)
+ *
+ * @param userId - ID do usuário (auth.users)
+ * @returns Dados do professor ou null se não encontrado
+ */
+export async function getTeacherByUserId(userId: string): Promise<Teacher | null> {
+  const { data, error } = await supabase
+    .from('teachers')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // Não encontrado
+      return null;
+    }
+    console.error('Error fetching teacher by user_id:', error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
  * Busca professores por nível de proficiência
  *
  * @param level - Nível de proficiência
@@ -170,13 +195,13 @@ export async function updateTeacher(
 /**
  * Atualiza último acesso ao horário do professor
  *
- * @param id - ID do professor
+ * @param userId - ID do usuário (auth.users)
  */
-export async function updateLastScheduleAccess(id: string): Promise<void> {
+export async function updateLastScheduleAccess(userId: string): Promise<void> {
   const { error } = await supabase
     .from('teachers')
     .update({ last_schedule_access: new Date().toISOString() })
-    .eq('id', id);
+    .eq('user_id', userId);
 
   if (error) {
     console.error('Error updating last access:', error);

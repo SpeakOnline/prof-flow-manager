@@ -13,18 +13,24 @@ type ScheduleInsert = Database['public']['Tables']['schedules']['Insert'];
 type ScheduleUpdate = Database['public']['Tables']['schedules']['Update'];
 
 /**
- * Busca todos os horários de um professor
+ * Busca todos os horários de um professor ou todos os horários (para admin)
  *
- * @param teacherId - ID do professor
+ * @param teacherId - ID do professor (opcional - se não informado, retorna todos)
  * @returns Lista de horários ordenada por dia e hora
  */
-export async function getTeacherSchedules(teacherId: string): Promise<Schedule[]> {
-  const { data, error } = await supabase
+export async function getTeacherSchedules(teacherId?: string): Promise<Schedule[]> {
+  let query = supabase
     .from('schedules')
     .select('*')
-    .eq('teacher_id', teacherId)
     .order('day_of_week', { ascending: true })
     .order('hour', { ascending: true });
+  
+  // Se teacherId foi informado, filtra por professor
+  if (teacherId) {
+    query = query.eq('teacher_id', teacherId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Error fetching schedules:', error);

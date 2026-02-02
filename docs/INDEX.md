@@ -1,219 +1,295 @@
-# ProfFlow Manager - Índice de Documentação
+# 📚 Índice da Documentação - AgendaPro
 
-> **Documentação Otimizada para LLMs** - Este documento serve como ponto de entrada para modelos de linguagem implementarem features no projeto.
-
-## 📋 Informações do Projeto
-
-- **Nome**: ProfFlow Manager (AgendaPro)
-- **Versão**: 1.0.0
-- **Stack**: React + TypeScript + Supabase + TailwindCSS + shadcn/ui
-- **Gerenciamento de Estado**: React Query (TanStack Query)
-- **Autenticação**: Supabase Auth
-- **Banco de Dados**: PostgreSQL (Supabase)
-
-## 🗂️ Estrutura de Documentação
-
-### 1. Features
-
-#### Features Implementadas ✅
-- [Autenticação e Autorização](./features/implemented/01-authentication.md)
-- [Gestão de Professores](./features/implemented/02-teachers-management.md)
-- [Gestão de Agenda/Horários](./features/implemented/03-schedule-management.md)
-- [Dashboard e Interface](./features/implemented/04-dashboard.md)
-
-#### Features Planejadas 🚧
-- [WhatsApp Messaging](./features/planned/01-whatsapp-messaging.md)
-- [Notificações Automáticas](./features/planned/02-notifications.md)
-- [Relatórios e Analytics](./features/planned/03-reports-analytics.md)
-- [Gestão de Alunos](./features/planned/04-students-management.md)
-- [Sistema de Pagamentos](./features/planned/05-payments.md)
-
-### 2. User Stories
-
-#### Por Módulo
-- [Autenticação](./user-stories/authentication/README.md)
-- [Gestão de Professores](./user-stories/teachers/README.md)
-- [Gestão de Agenda](./user-stories/schedules/README.md)
-- [WhatsApp](./user-stories/whatsapp/README.md)
-- [Notificações](./user-stories/notifications/README.md)
-- [Relatórios](./user-stories/reports/README.md)
-
-### 3. Documentação Técnica
-
-#### Arquitetura
-- [Visão Geral da Arquitetura](./technical/architecture/overview.md)
-- [Padrões de Código](./technical/architecture/code-patterns.md)
-- [Estrutura de Pastas](./technical/architecture/folder-structure.md)
-
-#### API e Integrações
-- [Supabase Client](./technical/api/supabase-client.md)
-- [Services Layer](./technical/api/services.md)
-- [React Query Hooks](./technical/api/react-query-hooks.md)
-
-#### Banco de Dados
-- [Schema](./technical/database/schema.md)
-- [Migrations](./technical/database/migrations.md)
-- [Row Level Security](./technical/database/rls-policies.md)
-
-### 4. Documentação Existente
-
-- [Revisão Completa do Projeto](./REVISAO-COMPLETA.md)
-- [Implementações Realizadas](./IMPLEMENTACOES-REALIZADAS.md)
-- [WhatsApp Messaging - Arquitetura Completa](./whatsapp-messaging/)
-
-## 🎯 Como Usar Esta Documentação (Para LLMs)
-
-### Para Implementar uma Nova Feature
-
-1. **Leia o contexto do projeto**:
-   - Comece por [Visão Geral da Arquitetura](./technical/architecture/overview.md)
-   - Revise [Padrões de Código](./technical/architecture/code-patterns.md)
-
-2. **Entenda a feature**:
-   - Leia a documentação em `features/planned/[nome-da-feature].md`
-   - Revise as user stories relacionadas
-
-3. **Consulte implementações similares**:
-   - Veja features implementadas em `features/implemented/`
-   - Use como referência para padrões e estruturas
-
-4. **Implemente seguindo os padrões**:
-   - Use os services layer (`src/services/`)
-   - Crie hooks React Query (`src/hooks/`)
-   - Aplique validação Zod (`src/lib/validators.ts`)
-   - Use componentes shadcn/ui
-
-5. **Atualize a documentação**:
-   - Mova a feature de `planned/` para `implemented/`
-   - Marque user stories como concluídas
-
-### Para Corrigir Bugs
-
-1. **Identifique o módulo** afetado
-2. **Leia a documentação** da feature em `features/implemented/`
-3. **Consulte o código** referenciado na documentação
-4. **Aplique a correção** seguindo os padrões estabelecidos
-
-### Para Entender o Código Existente
-
-1. **Comece pelo índice** de features implementadas
-2. **Navegue pela documentação** específica
-3. **Use os exemplos de código** como referência
-
-## 📊 Status Atual do Projeto
-
-### Implementado ✅
-
-- [x] Autenticação com Supabase Auth
-- [x] CRUD de Professores com React Query
-- [x] CRUD de Agenda/Horários
-- [x] Dashboard responsivo
-- [x] Validação de formulários com Zod
-- [x] Sistema de cores e utilidades centralizadas
-- [x] TypeScript strict mode
-- [x] Segurança: variáveis de ambiente
-
-### Em Progresso 🚧
-
-- [ ] WhatsApp Messaging (documentação completa criada)
-- [ ] Testes automatizados
-- [ ] Internacionalização (i18n)
-
-### Planejado 📋
-
-- [ ] Notificações automáticas por email
-- [ ] Relatórios e analytics
-- [ ] Gestão completa de alunos
-- [ ] Sistema de pagamentos
-- [ ] Aplicativo móvel (React Native)
-
-## 🔑 Conceitos Chave do Projeto
-
-### Arquitetura em Camadas
-
-```
-┌─────────────────────────────────────┐
-│     Components (UI Layer)           │
-│  - Dashboard, Forms, Views          │
-└──────────────┬──────────────────────┘
-               │
-┌──────────────▼──────────────────────┐
-│   React Query Hooks (State)         │
-│  - useTeachers, useSchedules        │
-└──────────────┬──────────────────────┘
-               │
-┌──────────────▼──────────────────────┐
-│   Services Layer (Data Access)      │
-│  - teacher.service.ts               │
-└──────────────┬──────────────────────┘
-               │
-┌──────────────▼──────────────────────┐
-│   Supabase Client (Backend)         │
-│  - PostgreSQL + Auth + Storage      │
-└─────────────────────────────────────┘
-```
-
-### Padrões de Nomenclatura
-
-- **Components**: PascalCase - `TeachersView.tsx`
-- **Hooks**: camelCase com 'use' - `useTeachers.ts`
-- **Services**: camelCase com '.service' - `teacher.service.ts`
-- **Types**: PascalCase - `Teacher`, `Schedule`
-- **Utils**: camelCase - `getLevelColor`
-
-### Convenções de Commit
-
-```
-feat: adicionar nova funcionalidade
-fix: corrigir bug
-refactor: refatorar código sem mudar funcionalidade
-docs: atualizar documentação
-test: adicionar ou modificar testes
-chore: tarefas de manutenção
-```
-
-## 🛠️ Ferramentas e Dependências Principais
-
-### Frontend
-- **React** 18.3.1 - UI Library
-- **TypeScript** 5.6.2 - Type Safety
-- **Vite** 6.0.1 - Build Tool
-- **TailwindCSS** 3.4.17 - Styling
-- **shadcn/ui** - Component Library
-
-### State Management
-- **TanStack Query** 5.62.11 - Server State
-- **React Context** - Client State (Auth)
-
-### Backend (Supabase)
-- **PostgreSQL** - Database
-- **Supabase Auth** - Authentication
-- **Row Level Security** - Authorization
-- **Edge Functions** - Serverless Functions
-
-### Validação e Utilidades
-- **Zod** 3.24.1 - Schema Validation
-- **date-fns** - Date Manipulation
-- **lucide-react** - Icons
-
-## 📚 Recursos Adicionais
-
-- [Supabase Docs](https://supabase.com/docs)
-- [React Query Docs](https://tanstack.com/query/latest)
-- [shadcn/ui Docs](https://ui.shadcn.com/)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-
-## 🤝 Contribuindo
-
-Ao adicionar novas features:
-
-1. Crie a documentação em `docs/features/planned/`
-2. Defina as user stories em `docs/user-stories/[modulo]/`
-3. Implemente seguindo os padrões estabelecidos
-4. Mova a documentação para `docs/features/implemented/`
-5. Atualize este índice
+**Última atualização:** 10 de novembro de 2025  
+**Versão do Sistema:** 1.1.0  
 
 ---
 
-**Última Atualização**: 2025-11-17
-**Mantido por**: Equipe de Desenvolvimento ProfFlow Manager
+## 📖 Documentação Principal
+
+1. **[PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)**  
+   📋 Visão geral completa do projeto, funcionalidades e arquitetura
+
+2. **[DATA_MODEL.md](./DATA_MODEL.md)** ✨ **ATUALIZADO**  
+   🗃️ Modelo de dados com novas tabelas (endereços, tipos de aula)
+
+3. **[FEATURES_CHECKLIST.md](./FEATURES_CHECKLIST.md)**  
+   ✅ Checklist de 100+ funcionalidades com status
+
+4. **[ROADMAP.md](./ROADMAP.md)**  
+   📅 Planejamento de 10 sprints (Nov 2025 - Mar 2026)
+
+5. **[SUMMARY.md](./SUMMARY.md)**  
+   📝 Resumo executivo de todas as documentações
+
+---
+
+## ✨ Novas Funcionalidades (10/Nov/2025)
+
+6. **[EXTENDED_FEATURES.md](./EXTENDED_FEATURES.md)** ⭐ **NOVO**  
+   📦 Documentação completa das funcionalidades estendidas:
+   - 🏠 Endereço do professor (com busca CEP)
+   - 📊 Desempenho em sala (admin only)
+   - 📚 Tipos de aula (relacionamento N:M)
+   - 🎓 Formação acadêmica
+   - 🔍 Busca avançada (7 filtros)
+
+7. **[TESTING_GUIDE.md](./TESTING_GUIDE.md)** ⭐ **NOVO**  
+   🧪 Guia completo de testes passo a passo
+   - Instruções para executar migration
+   - Checklist de testes (admin e teacher)
+   - Validação de segurança (RLS)
+   - Queries de debug
+
+8. **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** ⭐ **NOVO**  
+   📊 Resumo executivo da implementação
+   - 2.500+ linhas de código
+   - 12 RLS policies
+   - 8 índices de performance
+   - Status: ✅ PRONTO PARA PRODUÇÃO
+
+---
+
+## 🚀 Início Rápido
+
+### 👨‍💻 Para Desenvolvedores
+
+**Começando agora?**
+1. ⚡ **URGENTE:** Execute `supabase/migrations/001_add_teacher_extended_info.sql` no Supabase
+2. 📖 Leia `EXTENDED_FEATURES.md` para entender as novas funcionalidades
+3. 🧪 Siga `TESTING_GUIDE.md` linha por linha
+4. 🗃️ Consulte `DATA_MODEL.md` para o banco atualizado
+
+**Já está desenvolvendo?**
+1. 📋 Use `FEATURES_CHECKLIST.md` para ver o que falta
+2. 📅 Veja `ROADMAP.md` para planejamento
+3. 💻 Consulte `.github/code-examples.md` para padrões
+
+### 👔 Para Product Owners
+
+1. 📊 Leia `IMPLEMENTATION_SUMMARY.md` - O que foi entregue
+2. 📦 Veja `EXTENDED_FEATURES.md` - Detalhes técnicos
+3. 🧪 Use `TESTING_GUIDE.md` - Como validar
+4. 📅 Consulte `ROADMAP.md` - Próximos passos
+
+### 🧪 Para Testers
+
+**Sequência de testes:**
+1. ⚡ Execute a migration no Supabase SQL Editor
+2. 🧪 Siga `TESTING_GUIDE.md` passo a passo
+3. ✅ Valide todos os itens do checklist
+4. 🐛 Reporte bugs encontrados
+
+---
+
+## 📊 Status do Projeto
+
+### 📈 Visão Geral
+| Métrica | Status |
+|---------|--------|
+| **Fase Atual** | Sprint 1 (Foundation) |
+| **Progresso** | 35% completo |
+| **Próximo Sprint** | Sprint 2 - 16 Nov 2025 |
+| **Features** | 35/100+ implementadas |
+| **Documentos** | 8/8 completos ✅ |
+
+### ✨ Última Entrega (10/Nov/2025)
+- ✅ **Endereço do professor** - COMPLETO
+- ✅ **Desempenho em sala** - COMPLETO
+- ✅ **Tipos de aula** - COMPLETO
+- ✅ **Formação acadêmica** - COMPLETO
+- ✅ **Busca avançada** - COMPLETO
+- ✅ **Gerenciamento de tipos** - COMPLETO
+
+### 📊 Estatísticas da Implementação
+```
+📝 SQL:        392 linhas (migration)
+💻 TypeScript: ~2.500 linhas (componentes + API)
+🗃️ Tabelas:    3 novas
+🔒 RLS:        12 policies
+⚡ Índices:    8 otimizações
+📦 Components: 4 novos
+📚 Docs:       3 novos arquivos
+```
+
+---
+
+## 🗂️ Estrutura de Arquivos
+
+```
+📦 prof-flow-manager/
+├── 📁 docs/                           # Toda a documentação
+│   ├── 📄 INDEX.md                    # Este arquivo (índice)
+│   ├── 📄 PROJECT_DOCUMENTATION.md
+│   ├── 📄 DATA_MODEL.md               # ✨ ATUALIZADO
+│   ├── 📄 FEATURES_CHECKLIST.md
+│   ├── 📄 ROADMAP.md
+│   ├── 📄 SUMMARY.md
+│   ├── 📄 EXTENDED_FEATURES.md        # ⭐ NOVO
+│   ├── 📄 TESTING_GUIDE.md            # ⭐ NOVO
+│   └── 📄 IMPLEMENTATION_SUMMARY.md   # ⭐ NOVO
+│
+├── 📁 supabase/
+│   └── 📁 migrations/
+│       └── 📄 001_add_teacher_extended_info.sql  # ⭐ NOVO (392 linhas)
+│
+├── 📁 src/
+│   ├── 📁 integrations/supabase/
+│   │   ├── 📄 extended-types.ts       # ⭐ NOVO
+│   │   └── 📄 types.ts                # ✨ ATUALIZADO
+│   ├── 📁 lib/api/
+│   │   └── 📄 teacher-extended.ts     # ⭐ NOVO
+│   └── 📁 components/
+│       ├── 📁 Dashboard/
+│       │   └── 📄 Dashboard.tsx       # ✨ ATUALIZADO
+│       ├── 📁 Layout/
+│       │   └── 📄 Sidebar.tsx         # ✨ ATUALIZADO
+│       └── 📁 Teachers/
+│           ├── 📄 TeacherAddressForm.tsx        # ⭐ NOVO
+│           ├── 📄 TeacherAdvancedSearch.tsx     # ⭐ NOVO
+│           ├── 📄 EnhancedTeacherForm.tsx       # ⭐ NOVO
+│           └── 📄 LessonTypesManagement.tsx     # ⭐ NOVO
+│
+└── 📁 .github/
+    ├── 📄 copilot-instructions.md
+    └── 📄 code-examples.md            # ⭐ NOVO
+```
+
+**Legenda:**
+- ⭐ **NOVO** - Arquivo criado na última entrega
+- ✨ **ATUALIZADO** - Arquivo modificado na última entrega
+
+---
+
+## 🎯 Roadmap de Leitura
+
+### 🆕 Acabou de entrar no projeto?
+```
+1. PROJECT_DOCUMENTATION.md   # Entenda o projeto
+2. DATA_MODEL.md             # Veja a estrutura
+3. EXTENDED_FEATURES.md      # Conheça as novidades
+4. TESTING_GUIDE.md          # Aprenda a testar
+```
+
+### 💼 Gerente de Projeto / PO?
+```
+1. IMPLEMENTATION_SUMMARY.md  # O que foi entregue
+2. FEATURES_CHECKLIST.md     # Status das features
+3. ROADMAP.md                # Próximos passos
+```
+
+### 👨‍💻 Desenvolvedor Iniciando?
+```
+1. EXTENDED_FEATURES.md      # Novas funcionalidades
+2. DATA_MODEL.md             # Banco de dados
+3. code-examples.md          # Padrões de código
+4. TESTING_GUIDE.md          # Como testar
+```
+
+### 🧪 Testador / QA?
+```
+1. TESTING_GUIDE.md          # Guia de testes completo
+2. EXTENDED_FEATURES.md      # O que testar
+3. FEATURES_CHECKLIST.md     # O que já funciona
+```
+
+---
+
+## 🔗 Links Importantes
+
+### 🌐 Externos
+- [Supabase Dashboard](https://supabase.com/dashboard) - Banco de dados
+- [ViaCEP API](https://viacep.com.br) - Busca de endereços
+- [Shadcn/ui](https://ui.shadcn.com) - Componentes UI
+
+### 📚 Internos
+- [GitHub Copilot Instructions](../.github/copilot-instructions.md)
+- [Code Examples](../.github/code-examples.md)
+- [README Principal](../README.md)
+
+---
+
+## 📞 Precisa de Ajuda?
+
+### 🤔 Dúvidas Técnicas
+1. Consulte `EXTENDED_FEATURES.md` para detalhes
+2. Veja `TESTING_GUIDE.md` para problemas comuns
+3. Execute queries de debug do guia
+
+### 🔒 Problemas de Segurança (RLS)
+1. Verifique policies em `EXTENDED_FEATURES.md`
+2. Execute queries de validação em `TESTING_GUIDE.md`
+3. Confirme role do usuário no Supabase
+
+### 🐛 Bugs ou Comportamento Inesperado
+1. ✅ Migration foi executada?
+2. ✅ Servidor foi reiniciado?
+3. ✅ Consultou "Possíveis Problemas" em `TESTING_GUIDE.md`?
+
+---
+
+## 🎉 Changelog Recente
+
+### **v1.1.0** - 10 de novembro de 2025
+
+**✨ Novas Funcionalidades:**
+- Endereço do professor (busca CEP automática)
+- Desempenho em sala (acesso admin)
+- Tipos de aula (relacionamento N:M)
+- Formação acadêmica (busca textual)
+- Busca avançada (7 filtros simultâneos)
+- Gerenciamento de tipos de aula
+
+**🔒 Segurança:**
+- 12 RLS policies implementadas
+- Acesso restrito a campos sensíveis
+- Validação de permissões por role
+
+**⚡ Performance:**
+- 8 índices criados
+- Índice GIN para busca textual
+- Otimizações em queries complexas
+
+**📚 Documentação:**
+- 3 novos documentos (68KB)
+- Guia de testes completo
+- Resumo executivo da implementação
+
+---
+
+### **v1.0.0** - 2 de novembro de 2025
+
+**🎉 Lançamento Inicial:**
+- Autenticação e autorização
+- CRUD básico de professores
+- Estrutura do banco de dados
+- 5 documentações completas
+
+---
+
+## 🚀 Próximos Passos
+
+### ⚡ Urgente (Fazer Agora)
+1. [ ] Executar migration no Supabase
+2. [ ] Testar todas as funcionalidades
+3. [ ] Validar segurança (RLS)
+
+### 🎯 Prioritário (Esta Semana)
+1. [ ] Atualizar FEATURES_CHECKLIST.md
+2. [ ] Criar exemplos de uso
+3. [ ] Documentar casos de uso
+
+### 📅 Planejado (Próxima Sprint)
+1. [ ] Implementar Schedule CRUD (Sprint 2)
+2. [ ] Integrar calendário visual
+3. [ ] Exportação de dados
+
+---
+
+**📌 Dica:** Mantenha este índice aberto em uma aba para consulta rápida!
+
+---
+
+**Versão do Documento:** 1.0.0  
+**Última Atualização:** 10 de novembro de 2025  
+**Mantenedor:** Equipe AgendaPro

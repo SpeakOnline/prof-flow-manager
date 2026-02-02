@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,12 +6,16 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, LogIn } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAuth } from "@/hooks/useAuth";
+import { signIn } from "@/integrations/supabase/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { loginSchema } from "@/lib/validators";
-import { z } from "zod";
+import { Link } from "react-router-dom";
 
-export const LoginForm = () => {
+interface LoginFormProps {
+  onSuccess: () => void;
+}
+
+export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [credentials, setCredentials] = useState({
     email: '',
     password: ''
@@ -19,89 +23,99 @@ export const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const isMobile = useIsMobile();
-  const { signIn } = useAuth();
   const { toast } = useToast();
+  const isMountedRef = useRef(true);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Usuários demo para teste
-  const demoUsers = [
-    {
-      email: 'admin@escola.com',
-      password: 'admin123',
-      role: 'admin' as const,
-      name: 'Ana Silva',
-      label: 'Administrador'
-    },
-    {
-      email: 'professor@escola.com',
-      password: 'prof123',
-      role: 'teacher' as const,
-      name: 'Carlos Santos',
-      label: 'Professor'
-    }
-  ];
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
     setIsLoading(true);
-
+    
     try {
-      // Validar credenciais com Zod
-      const validatedData = loginSchema.parse({
+      console.log('[LoginForm] Iniciando login...');
+      const { data, error } = await signIn({
         email: credentials.email,
-        password: credentials.password,
+        password: credentials.password
       });
-
-      // Autenticação real com Supabase
-      await signIn(validatedData.email, validatedData.password);
-
-      toast({
-        title: 'Login realizado',
-        description: 'Bem-vindo ao AgendaPro!',
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        // Erros de validação
-        const fieldErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) {
-            fieldErrors[err.path[0].toString()] = err.message;
-          }
-        });
-        setErrors(fieldErrors);
-      } else if (error instanceof Error) {
-        // Erros de autenticação
+      
+      if (error) {
+        console.error('[LoginForm] Erro no login:', error);
         toast({
-          title: 'Erro no login',
-          description: error.message || 'Credenciais inválidas',
-          variant: 'destructive',
+          title: "Erro ao fazer login",
+          description: error.message,
+          variant: "destructive"
         });
+        return;
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDemoLogin = async (user: typeof demoUsers[0]) => {
-    setCredentials({ email: user.email, password: user.password });
-    setIsLoading(true);
-
-    try {
-      await signIn(user.email, user.password);
-      toast({
-        title: 'Login demo realizado',
-        description: `Bem-vindo, ${user.name}!`,
-      });
+      
+      if (data.user) {
+        console.log('[LoginForm] Login bem-sucedido, user:', data.user.id);
+        toast({
+          title: "Login realizado com sucesso",
+          description: "Bem-vindo de volta!",
+        });
+        
+        // Aguarda um pouco para o AuthContext processar o onAuthStateChange
+        await new Promise(resolve => {
+          timeoutRef.current = setTimeout(resolve, 500);
+        });
+        
+        if (isMountedRef.current) {
+          console.log('[LoginForm] Chamando onSuccess após delay');
+          onSuccess();
+        }
+      }
     } catch (error) {
+      console.error('[LoginForm] Exception:', error);
+      
+      // Ignora AbortError pois o login pode ter funcionado
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn('[LoginForm] AbortError no login, mas pode ter funcionado. Aguardando...');
+        
+        // Aguarda um pouco e verifica se o login funcionou
+        await new Promise(resolve => {
+          timeoutRef.current = setTimeout(resolve, 1500);
+        });
+        
+        if (!isMountedRef.current) return;
+        
+        const { data: sessionCheck } = await supabase.auth.getSession();
+        if (sessionCheck.session?.user?.email === credentials.email) {
+          console.log('[LoginForm] Login confirmado após AbortError');
+          toast({
+            title: "Login realizado com sucesso",
+            description: "Bem-vindo de volta!",
+          });
+          if (isMountedRef.current) {
+            onSuccess();
+          }
+          return;
+        }
+      }
+      
       toast({
-        title: 'Erro no login demo',
-        description: error instanceof Error ? error.message : 'Erro ao fazer login',
-        variant: 'destructive',
+        title: "Erro ao fazer login",
+        description: error instanceof Error ? error.message : "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Função de login demo removida pois não é mais necessária
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -170,40 +184,17 @@ export const LoginForm = () => {
               </Button>
             </form>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">
-                  Ou use uma conta demo
-                </span>
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <p className="text-sm text-center text-muted-foreground">Ou faça login com uma conta demo:</p>
-              <div className={`${isMobile ? 'flex flex-col space-y-2' : 'flex space-x-2'}`}>
-                {demoUsers.map(user => (
-                  <Button
-                    key={user.email}
-                    type="button"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => handleDemoLogin(user)}
-                  >
-                    {user.label}
-                    <Badge variant="secondary" className="ml-2">{user.role === 'admin' ? 'Admin' : 'Prof'}</Badge>
-                  </Button>
-                ))}
-              </div>
+              <p className="text-xs text-center text-muted-foreground mt-2">
+                Não tem uma conta? <Link to="/register" className="text-primary hover:underline">Cadastre-se</Link>
+              </p>
             </div>
           </CardContent>
         </Card>
 
         <div className="text-center">
           <p className="text-xs text-muted-foreground">
-            Autenticação integrada com Supabase
+            Autenticação implementada com Supabase
           </p>
         </div>
       </div>

@@ -27,21 +27,24 @@ type ScheduleInsert = Database['public']['Tables']['schedules']['Insert'];
 type ScheduleUpdate = Database['public']['Tables']['schedules']['Update'];
 
 /**
- * Hook para buscar todos os horários de um professor
+ * Hook para buscar todos os horários de um professor ou todos os horários (admin)
  *
- * @param teacherId - ID do professor
- * @returns Query com horários do professor
+ * @param teacherId - ID do professor (opcional - se undefined, busca todos para admin)
+ * @returns Query com horários do professor ou todos
  *
  * @example
  * ```tsx
+ * // Para professor específico
  * const { data: schedules, isLoading } = useTeacherSchedules(teacherId);
+ * 
+ * // Para admin ver todos
+ * const { data: schedules, isLoading } = useTeacherSchedules(undefined);
  * ```
  */
 export function useTeacherSchedules(teacherId: string | undefined) {
   return useQuery({
     queryKey: ['schedules', 'teacher', teacherId],
-    queryFn: () => getTeacherSchedules(teacherId!),
-    enabled: !!teacherId,
+    queryFn: () => getTeacherSchedules(teacherId),
     staleTime: 2 * 60 * 1000, // 2 minutos
   });
 }
@@ -117,8 +120,14 @@ export function useCreateSchedule() {
   return useMutation({
     mutationFn: (schedule: ScheduleInsert) => createSchedule(schedule),
     onSuccess: (newSchedule) => {
+      // Invalida a query específica do professor
       queryClient.invalidateQueries({
         queryKey: ['schedules', 'teacher', newSchedule.teacher_id],
+      });
+      
+      // Invalida também a query geral (usada pelo admin)
+      queryClient.invalidateQueries({
+        queryKey: ['schedules', 'teacher', undefined],
       });
 
       toast({

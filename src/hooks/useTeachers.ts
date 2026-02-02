@@ -10,6 +10,7 @@ import { useToast } from './use-toast';
 import {
   getAllTeachers,
   getTeacherById,
+  getTeacherByUserId,
   getTeachersByLevel,
   getCertifiedTeachers,
   searchTeachers,
@@ -52,6 +53,20 @@ export function useTeacher(id: string) {
     queryKey: ['teachers', id],
     queryFn: () => getTeacherById(id),
     enabled: !!id, // Só executa se ID estiver definido
+  });
+}
+
+/**
+ * Hook para buscar um professor pelo user_id (ID do auth.users)
+ *
+ * @param userId - ID do usuário (auth.users)
+ * @returns Query com dados do professor
+ */
+export function useTeacherByUserId(userId: string) {
+  return useQuery({
+    queryKey: ['teachers', 'user', userId],
+    queryFn: () => getTeacherByUserId(userId),
+    enabled: !!userId,
   });
 }
 
