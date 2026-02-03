@@ -214,6 +214,26 @@ export async function deleteSchedule(id: string): Promise<void> {
 }
 
 /**
+ * Cria múltiplos horários de uma vez (bulk create)
+ *
+ * @param schedules - Array de dados dos horários
+ * @returns Array de horários criados
+ */
+export async function createSchedulesBulk(schedules: ScheduleInsert[]): Promise<Schedule[]> {
+  const { data, error } = await supabase
+    .from('schedules')
+    .insert(schedules)
+    .select();
+
+  if (error) {
+    console.error('Error creating schedules in bulk:', error);
+    throw new Error('Erro ao criar horários');
+  }
+
+  return data || [];
+}
+
+/**
  * Busca horários para o próximo dia (usado para lembretes)
  *
  * @returns Lista de horários com aula nas próximas 24h
