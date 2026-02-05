@@ -103,7 +103,7 @@
     --status-free-foreground: 0 0% 98%;
     --status-occupied: 38 92% 50%;
     --status-occupied-foreground: 0 0% 98%;
-    --status-unavailable: 0 0% 64%;
+    --status-unavailable: 0 84% 60%;
     --status-unavailable-foreground: 0 0% 98%;
 
     /* Borders and inputs */

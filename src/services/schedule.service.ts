@@ -127,6 +127,10 @@ export async function createSchedule(schedule: ScheduleInsert): Promise<Schedule
 
   if (error) {
     console.error('Error creating schedule:', error);
+    // Verifica se é erro de duplicação (código 23505 é unique_violation)
+    if (error.code === '23505') {
+      throw new Error('Este horário já existe na agenda');
+    }
     throw new Error('Erro ao criar horário');
   }
 
@@ -211,6 +215,30 @@ export async function deleteSchedule(id: string): Promise<void> {
     console.error('Error deleting schedule:', error);
     throw new Error('Erro ao deletar horário');
   }
+}
+
+/**
+ * Cria múltiplos horários de uma vez (bulk create)
+ *
+ * @param schedules - Array de dados dos horários
+ * @returns Array de horários criados
+ */
+export async function createSchedulesBulk(schedules: ScheduleInsert[]): Promise<Schedule[]> {
+  const { data, error } = await supabase
+    .from('schedules')
+    .insert(schedules)
+    .select();
+
+  if (error) {
+    console.error('Error creating schedules in bulk:', error);
+    // Verifica se é erro de duplicação (código 23505 é unique_violation)
+    if (error.code === '23505') {
+      throw new Error('Um ou mais horários já existem na agenda. Verifique os horários selecionados.');
+    }
+    throw new Error('Erro ao criar horários');
+  }
+
+  return data || [];
 }
 
 /**

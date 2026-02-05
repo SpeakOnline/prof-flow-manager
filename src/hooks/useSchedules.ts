@@ -13,6 +13,7 @@ import {
   getOccupiedSchedules,
   findAvailableTeachers,
   createSchedule,
+  createSchedulesBulk,
   updateSchedule,
   bookSchedule,
   freeSchedule,
@@ -146,6 +147,46 @@ export function useCreateSchedule() {
 }
 
 /**
+ * Hook para criar múltiplos horários de uma vez (bulk create)
+ *
+ * @returns Mutation para criar múltiplos horários
+ */
+export function useCreateSchedulesBulk() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (schedules: ScheduleInsert[]) => createSchedulesBulk(schedules),
+    onSuccess: (newSchedules) => {
+      // Invalida queries de todos os professores envolvidos
+      const teacherIds = [...new Set(newSchedules.map(s => s.teacher_id))];
+      teacherIds.forEach(teacherId => {
+        queryClient.invalidateQueries({
+          queryKey: ['schedules', 'teacher', teacherId],
+        });
+      });
+      
+      // Invalida também a query geral (usada pelo admin)
+      queryClient.invalidateQueries({
+        queryKey: ['schedules', 'teacher', undefined],
+      });
+
+      toast({
+        title: 'Horários criados',
+        description: `${newSchedules.length} horário(s) adicionado(s) com sucesso!`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao criar horários',
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+/**
  * Hook para atualizar um horário
  *
  * @returns Mutation para atualizar horário
@@ -193,6 +234,10 @@ export function useBookSchedule() {
       queryClient.invalidateQueries({
         queryKey: ['schedules', 'teacher', schedule.teacher_id],
       });
+      // Invalida também a query geral (usada pelo admin)
+      queryClient.invalidateQueries({
+        queryKey: ['schedules', 'teacher', undefined],
+      });
 
       toast({
         title: 'Aula agendada',
@@ -224,6 +269,10 @@ export function useFreeSchedule() {
       queryClient.invalidateQueries({
         queryKey: ['schedules', 'teacher', schedule.teacher_id],
       });
+      // Invalida também a query geral (usada pelo admin)
+      queryClient.invalidateQueries({
+        queryKey: ['schedules', 'teacher', undefined],
+      });
 
       toast({
         title: 'Horário liberado',
@@ -254,6 +303,10 @@ export function useMarkScheduleUnavailable() {
     onSuccess: (schedule) => {
       queryClient.invalidateQueries({
         queryKey: ['schedules', 'teacher', schedule.teacher_id],
+      });
+      // Invalida também a query geral (usada pelo admin)
+      queryClient.invalidateQueries({
+        queryKey: ['schedules', 'teacher', undefined],
       });
 
       toast({

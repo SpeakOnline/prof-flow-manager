@@ -18,11 +18,13 @@ interface ScheduleGridProps {
 }
 
 const days = [
+  { key: 'sunday', label: 'Domingo' },
   { key: 'monday', label: 'Segunda' },
   { key: 'tuesday', label: 'Terça' },
   { key: 'wednesday', label: 'Quarta' },
   { key: 'thursday', label: 'Quinta' },
-  { key: 'friday', label: 'Sexta' }
+  { key: 'friday', label: 'Sexta' },
+  { key: 'saturday', label: 'Sábado' }
 ];
 
 const getStatusColor = (status: ScheduleSlot['status']) => {
@@ -43,7 +45,7 @@ const getStatusLabel = (status: ScheduleSlot['status']) => {
     case 'free':
       return 'Livre';
     case 'occupied':
-      return 'Ocupado';
+      return 'Com aluno';
     case 'unavailable':
       return 'Indisponível';
   }
@@ -52,7 +54,7 @@ const getStatusLabel = (status: ScheduleSlot['status']) => {
 export const ScheduleGrid = ({ schedule, onSlotClick, readOnly = false }: ScheduleGridProps) => {
   const isMobile = useIsMobile();
   return (
-    <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5'} gap-4`}>
+    <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-4 lg:grid-cols-7'} gap-4`}>
       {days.map((day) => (
         <div key={day.key} className="space-y-2">
           <h3 className="text-sm font-semibold text-center p-2 bg-muted rounded-md">
