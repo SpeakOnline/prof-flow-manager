@@ -127,6 +127,10 @@ export async function createSchedule(schedule: ScheduleInsert): Promise<Schedule
 
   if (error) {
     console.error('Error creating schedule:', error);
+    // Verifica se é erro de duplicação (código 23505 é unique_violation)
+    if (error.code === '23505') {
+      throw new Error('Este horário já existe na agenda');
+    }
     throw new Error('Erro ao criar horário');
   }
 
@@ -227,6 +231,10 @@ export async function createSchedulesBulk(schedules: ScheduleInsert[]): Promise<
 
   if (error) {
     console.error('Error creating schedules in bulk:', error);
+    // Verifica se é erro de duplicação (código 23505 é unique_violation)
+    if (error.code === '23505') {
+      throw new Error('Um ou mais horários já existem na agenda. Verifique os horários selecionados.');
+    }
     throw new Error('Erro ao criar horários');
   }
 

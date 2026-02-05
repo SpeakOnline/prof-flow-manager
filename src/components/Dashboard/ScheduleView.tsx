@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Save, Loader2, Plus, ArrowLeft, User, Calendar } from "lucide-react";
+import { Clock, Save, Loader2, Plus, ArrowLeft, User, Calendar, Trash2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useTeacherSchedules, useBookSchedule, useFreeSchedule, useMarkScheduleUnavailable, useCreateSchedulesBulk } from "@/hooks/useSchedules";
+import { useTeacherSchedules, useBookSchedule, useFreeSchedule, useMarkScheduleUnavailable, useCreateSchedulesBulk, useDeleteSchedule } from "@/hooks/useSchedules";
 import { useTeachers, useTeacher, useTeacherByUserId } from "@/hooks/useTeachers";
 import { updateLastScheduleAccess } from "@/services/teacher.service";
 import { Database } from "@/integrations/supabase/types";
@@ -81,7 +81,7 @@ const dayLabels: Record<string, string> = {
 // Ordem dos dias para exibição
 const daysOrder = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-// Horários disponíveis (8h às 22h)
+// Para compatibilidade com código existente
 const availableHours = Array.from({ length: 15 }, (_, i) => i + 8);
 
 export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onBack }: ScheduleViewProps) => {
@@ -95,10 +95,12 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
   const [createForm, setCreateForm] = useState({
     teacherId: '',
     daysOfWeek: [] as string[],
-    hours: [] as number[],
+    timeSlots: [] as string[], // formato: "HH:MM"
     status: 'livre' as Schedule['status'],
     studentName: '',
   });
+  // Estado para entrada de horário manual
+  const [newTimeInput, setNewTimeInput] = useState({ hour: '08', minute: '00' });
   const isMobile = useIsMobile();
 
   // Busca o teacher pelo user_id (para quando o professor acessa sua própria agenda)
@@ -145,6 +147,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
   const freeMutation = useFreeSchedule();
   const unavailableMutation = useMarkScheduleUnavailable();
   const createBulkMutation = useCreateSchedulesBulk();
+  const deleteMutation = useDeleteSchedule();
 
   // Transform database schedules to ScheduleGrid format
   const transformedSchedule = useMemo(() => {
@@ -164,10 +167,11 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
       const dayKey = dayOfWeekToKey(s.day_of_week);
       if (!schedule[dayKey]) schedule[dayKey] = [];
 
+      const minute = s.minute ?? 0;
       schedule[dayKey].push({
         id: s.id,
         scheduleId: s.id,
-        time: `${s.hour.toString().padStart(2, '0')}:00`,
+        time: `${s.hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
         status: mapStatus(s.status),
         studentName: s.student_name || undefined,
         lastModified: s.updated_at ? new Date(s.updated_at) : undefined,
@@ -220,6 +224,18 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
     }
   };
 
+  const handleDeleteSlot = async () => {
+    if (!selectedSlot) return;
+
+    try {
+      await deleteMutation.mutateAsync(selectedSlot.scheduleId);
+      setIsEditDialogOpen(false);
+      setSelectedSlot(null);
+    } catch (error) {
+      console.error('Error deleting schedule:', error);
+    }
+  };
+
   const handleOpenCreateDialog = () => {
     // Reset form with default values
     // Se admin está vendo a agenda de um professor específico, pré-seleciona esse professor
@@ -229,7 +245,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
     setCreateForm({
       teacherId: defaultTeacherId,
       daysOfWeek: [],
-      hours: [],
+      timeSlots: [],
       status: 'livre',
       studentName: '',
     });
@@ -242,6 +258,38 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
       daysOfWeek: prev.daysOfWeek.includes(day)
         ? prev.daysOfWeek.filter(d => d !== day)
         : [...prev.daysOfWeek, day]
+    }));
+  };
+
+  // Adiciona um horário à lista
+  const handleAddTimeSlot = () => {
+    const timeLabel = `${newTimeInput.hour.padStart(2, '0')}:${newTimeInput.minute.padStart(2, '0')}`;
+    
+    // Verifica se já existe
+    if (createForm.timeSlots.includes(timeLabel)) {
+      return; // Já existe, não adiciona
+    }
+    
+    setCreateForm(prev => ({
+      ...prev,
+      timeSlots: [...prev.timeSlots, timeLabel].sort()
+    }));
+  };
+
+  // Remove um horário da lista
+  const handleRemoveTimeSlot = (timeLabel: string) => {
+    setCreateForm(prev => ({
+      ...prev,
+      timeSlots: prev.timeSlots.filter(t => t !== timeLabel)
+    }));
+  };
+
+  const handleToggleTimeSlot = (timeLabel: string) => {
+    setCreateForm(prev => ({
+      ...prev,
+      timeSlots: prev.timeSlots.includes(timeLabel)
+        ? prev.timeSlots.filter(t => t !== timeLabel)
+        : [...prev.timeSlots, timeLabel]
     }));
   };
 
@@ -261,20 +309,13 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
     }));
   };
 
-  const handleSelectAllHours = () => {
-    setCreateForm(prev => ({
-      ...prev,
-      hours: prev.hours.length === availableHours.length ? [] : [...availableHours]
-    }));
-  };
-
   const handleCreateSchedule = async () => {
     // Validation
     if (user.role === 'admin' && !createForm.teacherId && !selectedTeacherId) {
       return; // Should show error, but button will be disabled
     }
 
-    if (createForm.daysOfWeek.length === 0 || createForm.hours.length === 0) {
+    if (createForm.daysOfWeek.length === 0 || createForm.timeSlots.length === 0) {
       return; // Button will be disabled
     }
 
@@ -289,15 +330,19 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
       return;
     }
 
-    // Create all combinations of days and hours
+    // Create all combinations of days and time slots
     const schedulesToCreate = createForm.daysOfWeek.flatMap(day => 
-      createForm.hours.map(hour => ({
-        teacher_id: teacherId,
-        day_of_week: dayKeyToNumber[day],
-        hour: hour,
-        status: createForm.status,
-        student_name: createForm.status === 'com_aluno' ? createForm.studentName : null,
-      }))
+      createForm.timeSlots.map(timeSlot => {
+        const [hourStr, minuteStr] = timeSlot.split(':');
+        return {
+          teacher_id: teacherId,
+          day_of_week: dayKeyToNumber[day],
+          hour: parseInt(hourStr, 10),
+          minute: parseInt(minuteStr, 10),
+          status: createForm.status,
+          student_name: createForm.status === 'com_aluno' ? createForm.studentName : null,
+        };
+      })
     );
 
     try {
@@ -346,15 +391,10 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
               <Clock className="h-5 w-5 text-primary" />
               {getScheduleTitle()}
             </div>
-            <div className={`flex gap-2 ${isMobile ? "w-full mt-2" : ""}`}>
-              <Button size="sm" onClick={handleOpenCreateDialog} className={isMobile ? "flex-1" : ""}>
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar Horário
-              </Button>
-              <Button size="sm" variant="outline" className={isMobile ? "flex-1" : ""}>
-                Imprimir
-              </Button>
-            </div>
+            <Button size="sm" onClick={handleOpenCreateDialog}>
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar Horário
+            </Button>
           </CardTitle>
           {/* Descrição para admin quando visualiza agenda geral */}
           {user.role === 'admin' && !selectedTeacherId && (
@@ -427,7 +467,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="free">Livre</SelectItem>
-                    <SelectItem value="occupied">Ocupado</SelectItem>
+                    <SelectItem value="occupied">Com aluno</SelectItem>
                     <SelectItem value="unavailable">Indisponível</SelectItem>
                   </SelectContent>
                 </Select>
@@ -447,8 +487,8 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
 
               <Button
                 onClick={handleSaveSlot}
-                className={isMobile ? "w-full" : "w-full"}
-                disabled={bookMutation.isPending || freeMutation.isPending || unavailableMutation.isPending}
+                className="w-full"
+                disabled={bookMutation.isPending || freeMutation.isPending || unavailableMutation.isPending || deleteMutation.isPending}
               >
                 {(bookMutation.isPending || freeMutation.isPending || unavailableMutation.isPending) ? (
                   <>
@@ -459,6 +499,25 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
                   <>
                     <Save className="mr-2 h-4 w-4" />
                     Salvar Alterações
+                  </>
+                )}
+              </Button>
+
+              <Button
+                onClick={handleDeleteSlot}
+                variant="destructive"
+                className="w-full"
+                disabled={bookMutation.isPending || freeMutation.isPending || unavailableMutation.isPending || deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Removendo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remover Horário
                   </>
                 )}
               </Button>
@@ -538,48 +597,118 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
               )}
             </div>
 
-            {/* Horários - seleção múltipla */}
+            {/* Horários - entrada manual */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label>Horários</Label>
+              <Label className="mb-2 block">Horários</Label>
+              
+              {/* Campos de entrada de hora e minuto */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex-1">
+                  <Label htmlFor="hourInput" className="text-xs text-muted-foreground">Hora</Label>
+                  <Input
+                    id="hourInput"
+                    type="number"
+                    min="0"
+                    max="23"
+                    value={newTimeInput.hour}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Limita a 2 dígitos e valores entre 0-23
+                      if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 23)) {
+                        setNewTimeInput(prev => ({ ...prev, hour: value.slice(0, 2) }));
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Formata com zero à esquerda ao sair do campo
+                      const value = parseInt(e.target.value) || 0;
+                      setNewTimeInput(prev => ({ ...prev, hour: value.toString().padStart(2, '0') }));
+                    }}
+                    className="w-full"
+                    placeholder="08"
+                  />
+                </div>
+                <span className="mt-5 text-lg font-medium">:</span>
+                <div className="flex-1">
+                  <Label htmlFor="minuteInput" className="text-xs text-muted-foreground">Minuto</Label>
+                  <Input
+                    id="minuteInput"
+                    type="number"
+                    min="0"
+                    max="59"
+                    value={newTimeInput.minute}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Limita a 2 dígitos e valores entre 0-59
+                      if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 59)) {
+                        setNewTimeInput(prev => ({ ...prev, minute: value.slice(0, 2) }));
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Formata com zero à esquerda ao sair do campo
+                      const value = parseInt(e.target.value) || 0;
+                      setNewTimeInput(prev => ({ ...prev, minute: value.toString().padStart(2, '0') }));
+                    }}
+                    className="w-full"
+                    placeholder="00"
+                  />
+                </div>
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
-                  onClick={handleSelectAllHours}
-                  className="text-xs"
+                  onClick={handleAddTimeSlot}
+                  className="mt-5"
+                  disabled={createForm.timeSlots.includes(`${newTimeInput.hour.padStart(2, '0')}:${newTimeInput.minute.padStart(2, '0')}`)}
                 >
-                  {createForm.hours.length === availableHours.length ? 'Desmarcar todos' : 'Selecionar todos'}
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar
                 </Button>
               </div>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                {availableHours.map((hour) => (
-                  <Button
-                    key={hour}
-                    type="button"
-                    variant={createForm.hours.includes(hour) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleToggleHour(hour)}
-                    className="w-full"
-                  >
-                    {hour.toString().padStart(2, '0')}:00
-                  </Button>
-                ))}
-              </div>
-              {createForm.hours.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  {createForm.hours.length} horário(s) selecionado(s)
-                </p>
+
+              {/* Lista de horários adicionados */}
+              {createForm.timeSlots.length > 0 ? (
+                <div className="border rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    {createForm.timeSlots.length} horário(s) adicionado(s):
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {createForm.timeSlots.map((timeSlot) => (
+                      <Badge 
+                        key={timeSlot} 
+                        variant="secondary"
+                        className="flex items-center gap-1 pl-2 pr-1 py-1"
+                      >
+                        <Clock className="h-3 w-3" />
+                        {timeSlot}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveTimeSlot(timeSlot)}
+                          className="h-5 w-5 p-0 ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full"
+                        >
+                          <span className="text-xs">×</span>
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="border rounded-lg p-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum horário adicionado. Use os campos acima para adicionar horários.
+                  </p>
+                </div>
               )}
             </div>
 
             {/* Resumo dos horários a serem criados */}
-            {createForm.daysOfWeek.length > 0 && createForm.hours.length > 0 && (
+            {createForm.daysOfWeek.length > 0 && createForm.timeSlots.length > 0 && (
               <div className="p-3 bg-muted rounded-lg">
                 <p className="text-sm font-medium mb-1">Resumo</p>
                 <p className="text-xs text-muted-foreground">
-                  Serão criados <strong>{createForm.daysOfWeek.length * createForm.hours.length}</strong> horário(s) 
-                  ({createForm.daysOfWeek.length} dia(s) × {createForm.hours.length} horário(s))
+                  Serão criados <strong>{createForm.daysOfWeek.length * createForm.timeSlots.length}</strong> horário(s) 
+                  ({createForm.daysOfWeek.length} dia(s) × {createForm.timeSlots.length} horário(s))
                 </p>
               </div>
             )}
@@ -622,7 +751,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
                 createBulkMutation.isPending || 
                 (user.role === 'admin' && !selectedTeacherId && !createForm.teacherId) ||
                 createForm.daysOfWeek.length === 0 ||
-                createForm.hours.length === 0 ||
+                createForm.timeSlots.length === 0 ||
                 (createForm.status === 'com_aluno' && !createForm.studentName.trim())
               }
             >
@@ -634,7 +763,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
               ) : (
                 <>
                   <Plus className="mr-2 h-4 w-4" />
-                  Criar {createForm.daysOfWeek.length * createForm.hours.length || 0} Horário(s)
+                  Criar {createForm.daysOfWeek.length * createForm.timeSlots.length || 0} Horário(s)
                 </>
               )}
             </Button>

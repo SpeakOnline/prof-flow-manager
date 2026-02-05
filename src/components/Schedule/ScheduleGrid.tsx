@@ -45,7 +45,7 @@ const getStatusLabel = (status: ScheduleSlot['status']) => {
     case 'free':
       return 'Livre';
     case 'occupied':
-      return 'Ocupado';
+      return 'Com aluno';
     case 'unavailable':
       return 'Indisponível';
   }

@@ -234,6 +234,10 @@ export function useBookSchedule() {
       queryClient.invalidateQueries({
         queryKey: ['schedules', 'teacher', schedule.teacher_id],
       });
+      // Invalida também a query geral (usada pelo admin)
+      queryClient.invalidateQueries({
+        queryKey: ['schedules', 'teacher', undefined],
+      });
 
       toast({
         title: 'Aula agendada',
@@ -265,6 +269,10 @@ export function useFreeSchedule() {
       queryClient.invalidateQueries({
         queryKey: ['schedules', 'teacher', schedule.teacher_id],
       });
+      // Invalida também a query geral (usada pelo admin)
+      queryClient.invalidateQueries({
+        queryKey: ['schedules', 'teacher', undefined],
+      });
 
       toast({
         title: 'Horário liberado',
@@ -295,6 +303,10 @@ export function useMarkScheduleUnavailable() {
     onSuccess: (schedule) => {
       queryClient.invalidateQueries({
         queryKey: ['schedules', 'teacher', schedule.teacher_id],
+      });
+      // Invalida também a query geral (usada pelo admin)
+      queryClient.invalidateQueries({
+        queryKey: ['schedules', 'teacher', undefined],
       });
 
       toast({
