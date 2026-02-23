@@ -50,17 +50,6 @@ export const Header = ({ user, onLogout }: HeaderProps) => {
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Configurações</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
                   <Button 
                     variant="ghost" 
                     size="sm" 

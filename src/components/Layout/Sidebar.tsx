@@ -7,7 +7,6 @@ import {
   Star,
   Shield,
   User,
-  Clock,
   Menu,
   X,
   BookOpen,
@@ -131,8 +130,9 @@ export const Sidebar = ({ userRole, activeTab, onTabChange, className }: Sidebar
         </div>
       </aside>
       {isMobile && isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-30"
+        <button 
+          type="button"
+          className="fixed inset-0 bg-black/50 z-30 cursor-default"
           onClick={() => setIsOpen(false)}
         />
       )}

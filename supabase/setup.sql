@@ -360,21 +360,20 @@ $$ LANGUAGE plpgsql;
 -- ============================================
 
 -- View para ver professores com seus horários livres
-CREATE OR REPLACE VIEW teachers_with_free_hours AS
+-- Usa SECURITY INVOKER para respeitar RLS do usuário consultante
+CREATE OR REPLACE VIEW teachers_with_free_hours
+WITH (security_invoker = true)
+AS
 SELECT 
   t.*,
-  COUNT(s.id) FILTER (WHERE s.status = 'livre') as free_hours_count,
-  COUNT(s.id) FILTER (WHERE s.status = 'ocupado') as occupied_hours_count
+  COUNT(s.id) FILTER (WHERE s.status = 'livre'::schedule_status) as free_hours_count,
+  COUNT(s.id) FILTER (WHERE s.status = 'com_aluno'::schedule_status) as occupied_hours_count
 FROM teachers t
 LEFT JOIN schedules s ON s.teacher_id = t.id
 GROUP BY t.id;
 
--- View para ver listas especiais ativas
-CREATE OR REPLACE VIEW active_special_lists AS
-SELECT *
-FROM special_lists
-WHERE (start_date IS NULL OR start_date <= CURRENT_DATE)
-  AND (end_date IS NULL OR end_date >= CURRENT_DATE);
+-- NOTA: View active_special_lists removida - tabela special_lists não possui
+-- colunas start_date/end_date para filtrar listas ativas.
 
 -- ============================================
 -- 7. SEED DATA (OPCIONAL - PARA TESTES)
