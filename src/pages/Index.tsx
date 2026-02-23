@@ -2,14 +2,20 @@ import { useState, useEffect } from "react";
 import { Dashboard } from "@/components/Dashboard/Dashboard";
 import { LoginForm } from "@/components/Auth/LoginForm";
 import { RegisterForm } from "@/components/Auth/RegisterForm";
+import { ConsentDialog } from "@/components/Auth/ConsentDialog";
 import { useAuth } from "@/components/Auth/AuthContext";
+import { useConsent } from "@/hooks/useConsent";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const Index = () => {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, signOut } = useAuth();
+  const { hasConsent, grantConsent, loading: consentsLoading } = useConsent();
   const location = useLocation();
   const navigate = useNavigate();
   const [showRegister, setShowRegister] = useState(location.pathname === "/register");
+
+  // Verifica se o usuário precisa dar consentimento (primeiro acesso)
+  const needsConsent = !!user && !consentsLoading && !hasConsent('data_processing');
 
   useEffect(() => {
     setShowRegister(location.pathname === "/register");
@@ -25,7 +31,16 @@ const Index = () => {
     navigate("/register");
   };
 
-  if (loading) {
+  const handleAcceptConsent = async () => {
+    await grantConsent('privacy_policy');
+    await grantConsent('data_processing');
+  };
+
+  const handleDeclineConsent = async () => {
+    await signOut();
+  };
+
+  if (loading || (user && consentsLoading)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -65,7 +80,16 @@ const Index = () => {
 
   console.log('[Index] Role do contexto:', role);
 
-  return <Dashboard user={dashboardUser} />;
+  return (
+    <>
+      <ConsentDialog
+        open={needsConsent}
+        onAccept={handleAcceptConsent}
+        onDecline={handleDeclineConsent}
+      />
+      <Dashboard user={dashboardUser} />
+    </>
+  );
 };
 
 export default Index;

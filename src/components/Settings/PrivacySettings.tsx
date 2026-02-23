@@ -1,8 +1,8 @@
 /**
  * PrivacySettings Component
  *
- * Componente para gerenciar configurações de privacidade do usuário conforme LGPD.
- * Permite gerenciar consentimentos, exportar dados e solicitar exclusão de conta.
+ * Componente simplificado para gerenciar configurações de privacidade do usuário.
+ * Permite exportar dados e solicitar exclusão de conta.
  */
 
 import { useState } from 'react';
@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
@@ -30,54 +29,12 @@ import {
   AlertTriangle, 
   Shield, 
   Loader2,
-  FileText,
-  CheckCircle,
-  XCircle,
-  ExternalLink
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthContext';
 import { useConsent } from '@/hooks/useConsent';
 import { exportUserData, deleteUserData } from '@/services/lgpd.service';
 import { useToast } from '@/hooks/use-toast';
-import { ConsentType } from '@/services/lgpd.service';
-
-interface ConsentItemProps {
-  type: ConsentType;
-  title: string;
-  description: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  disabled?: boolean;
-  required?: boolean;
-}
-
-const ConsentItem = ({ 
-  title, 
-  description, 
-  checked, 
-  onChange, 
-  disabled,
-  required 
-}: ConsentItemProps) => (
-  <div className="flex items-start justify-between py-4">
-    <div className="space-y-1 pr-4">
-      <div className="flex items-center gap-2">
-        <Label className="font-medium">{title}</Label>
-        {required && (
-          <Badge variant="secondary" className="text-xs">
-            Obrigatório
-          </Badge>
-        )}
-      </div>
-      <p className="text-sm text-muted-foreground">{description}</p>
-    </div>
-    <Switch
-      checked={checked}
-      onCheckedChange={onChange}
-      disabled={disabled || required}
-    />
-  </div>
-);
+import type { ConsentType } from '@/services/lgpd.service';
 
 export const PrivacySettings = () => {
   const { user, signOut } = useAuth();
@@ -101,7 +58,6 @@ export const PrivacySettings = () => {
     try {
       const data = await exportUserData(user.id);
       
-      // Criar arquivo JSON para download
       const blob = new Blob([JSON.stringify(data, null, 2)], {
         type: 'application/json',
       });
@@ -142,7 +98,6 @@ export const PrivacySettings = () => {
         description: 'Seus dados foram removidos. Você será desconectado.',
       });
 
-      // Aguardar um pouco antes de fazer logout
       setTimeout(async () => {
         await signOut();
       }, 2000);
@@ -174,126 +129,48 @@ export const PrivacySettings = () => {
         <div>
           <h2 className="text-xl font-semibold">Privacidade e Dados</h2>
           <p className="text-sm text-muted-foreground">
-            Gerencie suas preferências de privacidade conforme a LGPD
+            Gerencie seus dados pessoais e preferências de comunicação
           </p>
         </div>
       </div>
 
-      {/* Link para Política de Privacidade */}
+      {/* O que fazemos com seus dados */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Política de Privacidade</p>
-                <p className="text-sm text-muted-foreground">
-                  Leia nossa política completa sobre tratamento de dados
-                </p>
-              </div>
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => window.open('/privacidade', '_blank')}
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Ver política
-            </Button>
-          </div>
+        <CardHeader>
+          <CardTitle className="text-lg">Sobre seus dados</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>
+            Seus dados pessoais (nome, e-mail, telefone e informações profissionais) são usados
+            <strong> apenas para o funcionamento do sistema de agendamento</strong>.
+          </p>
+          <p>
+            Não compartilhamos nem vendemos seus dados para terceiros. Seus dados são protegidos 
+            com criptografia e controle de acesso.
+          </p>
         </CardContent>
       </Card>
 
-      {/* Consentimentos */}
+      {/* Comunicações */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Consentimentos</CardTitle>
+          <CardTitle className="text-lg">Comunicações</CardTitle>
           <CardDescription>
-            Gerencie suas preferências de consentimento para tratamento de dados
+            Escolha se deseja receber comunicações opcionais
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-0">
-          <ConsentItem
-            type="privacy_policy"
-            title="Política de Privacidade"
-            description="Aceite dos termos de uso e política de privacidade do sistema"
-            checked={hasConsent('privacy_policy')}
-            onChange={(checked) => handleConsentToggle('privacy_policy', !checked)}
-            required
-          />
-          
-          <Separator />
-          
-          <ConsentItem
-            type="data_processing"
-            title="Processamento de Dados"
-            description="Consentimento para processamento de dados pessoais necessários ao funcionamento do sistema"
-            checked={hasConsent('data_processing')}
-            onChange={(checked) => handleConsentToggle('data_processing', !checked)}
-            disabled={!hasConsent('privacy_policy')}
-          />
-          
-          <Separator />
-          
-          <ConsentItem
-            type="marketing"
-            title="Comunicações de Marketing"
-            description="Receber e-mails promocionais, novidades e dicas sobre o sistema"
-            checked={hasConsent('marketing')}
-            onChange={(checked) => handleConsentToggle('marketing', !checked)}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Status dos Consentimentos */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Status dos Consentimentos</CardTitle>
-        </CardHeader>
         <CardContent>
-          <div className="grid gap-3">
-            <div className="flex items-center justify-between text-sm">
-              <span>Política de Privacidade</span>
-              {hasConsent('privacy_policy') ? (
-                <Badge variant="default" className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Aceito
-                </Badge>
-              ) : (
-                <Badge variant="destructive">
-                  <XCircle className="h-3 w-3 mr-1" />
-                  Pendente
-                </Badge>
-              )}
+          <div className="flex items-center justify-between py-2">
+            <div className="space-y-1 pr-4">
+              <Label className="font-medium">E-mails informativos</Label>
+              <p className="text-sm text-muted-foreground">
+                Receber novidades e dicas sobre o sistema
+              </p>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span>Processamento de Dados</span>
-              {hasConsent('data_processing') ? (
-                <Badge variant="default" className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Aceito
-                </Badge>
-              ) : (
-                <Badge variant="destructive">
-                  <XCircle className="h-3 w-3 mr-1" />
-                  Pendente
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span>Comunicações de Marketing</span>
-              {hasConsent('marketing') ? (
-                <Badge variant="default" className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Aceito
-                </Badge>
-              ) : (
-                <Badge variant="secondary">
-                  <XCircle className="h-3 w-3 mr-1" />
-                  Não aceito
-                </Badge>
-              )}
-            </div>
+            <Switch
+              checked={hasConsent('marketing')}
+              onCheckedChange={(checked) => handleConsentToggle('marketing', !checked)}
+            />
           </div>
         </CardContent>
       </Card>
@@ -303,7 +180,7 @@ export const PrivacySettings = () => {
         <CardHeader>
           <CardTitle className="text-lg">Seus Dados</CardTitle>
           <CardDescription>
-            Exerça seus direitos garantidos pela LGPD
+            Você pode exportar ou excluir seus dados a qualquer momento
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -312,7 +189,7 @@ export const PrivacySettings = () => {
             <div>
               <p className="font-medium">Exportar meus dados</p>
               <p className="text-sm text-muted-foreground">
-                Baixe uma cópia de todos os seus dados pessoais em formato JSON
+                Baixe uma cópia de todos os seus dados pessoais
               </p>
             </div>
             <Button
@@ -337,13 +214,13 @@ export const PrivacySettings = () => {
           <Separator />
 
           {/* Zona de Perigo */}
-          <div className="pt-4">
+          <div className="pt-2">
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Zona de Perigo</AlertTitle>
+              <AlertTitle>Excluir conta</AlertTitle>
               <AlertDescription>
-                Excluir sua conta removerá permanentemente todos os seus dados pessoais, 
-                incluindo perfil, agendamentos e configurações. Esta ação não pode ser desfeita.
+                A exclusão da conta remove permanentemente todos os seus dados. 
+                Esta ação não pode ser desfeita.
               </AlertDescription>
             </Alert>
 
@@ -374,7 +251,6 @@ export const PrivacySettings = () => {
                       <li>Seu perfil e dados pessoais</li>
                       <li>Todos os seus agendamentos</li>
                       <li>Suas configurações e preferências</li>
-                      <li>Histórico de consentimentos</li>
                     </ul>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -393,18 +269,12 @@ export const PrivacySettings = () => {
         </CardContent>
       </Card>
 
-      {/* Informações adicionais */}
+      {/* Contato */}
       <Card>
         <CardContent className="pt-6">
-          <div className="text-sm text-muted-foreground space-y-2">
-            <p>
-              <strong>Encarregado de Dados (DPO):</strong> Para dúvidas sobre seus dados, 
-              entre em contato pelo e-mail: privacidade@agendapro.com.br
-            </p>
-            <p>
-              <strong>Prazo de resposta:</strong> Até 15 dias úteis conforme previsto na LGPD.
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Dúvidas sobre seus dados? Entre em contato: <strong>privacidade@agendapro.com.br</strong>
+          </p>
         </CardContent>
       </Card>
     </div>
