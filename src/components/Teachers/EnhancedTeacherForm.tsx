@@ -57,6 +57,18 @@ interface EnhancedTeacherFormProps {
   onCancel?: () => void;
 }
 
+const isMissingDistrictColumnError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object' || !('message' in error)) {
+    return false;
+  }
+
+  const message = String((error as { message?: unknown }).message || '').toLowerCase();
+  return (
+    message.includes("could not find the 'district' column")
+    || message.includes('column') && message.includes('district') && message.includes('schema cache')
+  );
+};
+
 export const EnhancedTeacherForm = ({
   teacher,
   onSuccess,
@@ -199,10 +211,20 @@ export const EnhancedTeacherForm = ({
           updates.performance = formData.performance ?? null;
         }
 
-        const { error } = await supabase
+        let { error } = await supabase
           .from('teachers')
           .update(updates)
           .eq('id', teacher.id);
+
+        if (error && isMissingDistrictColumnError(error)) {
+          const { district: _ignoredDistrict, ...updatesWithoutDistrict } = updates;
+          const retryResult = await supabase
+            .from('teachers')
+            .update(updatesWithoutDistrict)
+            .eq('id', teacher.id);
+
+          error = retryResult.error;
+        }
 
         if (error) throw error;
         teacherId = teacher.id;

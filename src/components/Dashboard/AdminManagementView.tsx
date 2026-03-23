@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { UserPlus, Loader2, ShieldCheck, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signUp } from '@/integrations/supabase/auth';
+import { resetUserPasswordToDefault, signUp } from '@/integrations/supabase/auth';
 
 export const AdminManagementView = () => {
   const [formData, setFormData] = useState({
@@ -22,7 +22,9 @@ export const AdminManagementView = () => {
     password: '',
     confirmPassword: '',
   });
+  const [resetEmail, setResetEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetLoading, setIsResetLoading] = useState(false);
   const { toast } = useToast();
 
   const resetForm = () => {
@@ -98,6 +100,44 @@ export const AdminManagementView = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!resetEmail.trim()) {
+      toast({
+        title: 'E-mail obrigatorio',
+        description: 'Informe o e-mail do usuario para resetar a senha.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsResetLoading(true);
+    try {
+      await resetUserPasswordToDefault({
+        email: resetEmail.trim(),
+      });
+
+      toast({
+        title: 'Senha resetada',
+        description: `Senha de ${resetEmail.trim()} definida para 123456. Oriente o usuario a trocar na aba Seguranca.`,
+      });
+      setResetEmail('');
+    } catch (error) {
+      console.error('Erro ao resetar senha:', error);
+      toast({
+        title: 'Erro no reset de senha',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Nao foi possivel resetar a senha para o padrao.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResetLoading(false);
     }
   };
 
@@ -194,6 +234,41 @@ export const AdminManagementView = () => {
                   <UserPlus className="mr-2 h-4 w-4" />
                   Criar Administrador
                 </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Resetar senha de usuario</CardTitle>
+          <CardDescription>
+            Define a senha padrao 123456 para qualquer conta do sistema
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleResetPassword} className="space-y-4 max-w-md">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">E-mail do usuario</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="usuario@email.com"
+                required
+              />
+            </div>
+
+            <Button type="submit" variant="outline" disabled={isResetLoading}>
+              {isResetLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Resetando...
+                </>
+              ) : (
+                'Resetar para senha padrao'
               )}
             </Button>
           </form>

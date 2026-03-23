@@ -6,6 +6,7 @@ import {
   Search,
   Star,
   Shield,
+  KeyRound,
   ShieldCheck,
   User,
   Menu,
@@ -71,6 +72,12 @@ export const Sidebar = ({ userRole, activeTab, onTabChange, className }: Sidebar
       id: 'privacy',
       label: 'Privacidade',
       icon: Shield,
+      roles: ['admin', 'teacher']
+    },
+    {
+      id: 'security',
+      label: 'Seguranca',
+      icon: KeyRound,
       roles: ['admin', 'teacher']
     },
     {

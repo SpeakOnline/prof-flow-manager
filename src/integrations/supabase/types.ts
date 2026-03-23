@@ -286,6 +286,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_reset_user_password_to_default: {
+        Args: { p_user_email: string }
+        Returns: undefined
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]

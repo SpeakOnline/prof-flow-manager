@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Users, Search, UserPlus, Eye, Calendar, Trash2 } from "lucide-react";
+import { Users, Search, UserPlus, Eye, Calendar, Trash2, KeyRound } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { EnhancedTeacherForm } from "@/components/Teachers/EnhancedTeacherForm";
@@ -28,6 +28,8 @@ import type { Teacher } from "@/integrations/supabase/extended-types";
 import { TEACHER_LEVEL_LABELS } from "@/integrations/supabase/extended-types";
 import { useDeleteTeacher } from "@/hooks/useTeachers";
 import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { resetUserPasswordToDefault } from "@/integrations/supabase/auth";
 
 interface TeachersViewProps {
   onViewSchedule?: (teacherId: string, teacherName: string) => void;
@@ -41,10 +43,12 @@ export const TeachersView = ({ onViewSchedule }: TeachersViewProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [teacherToDelete, setTeacherToDelete] = useState<Teacher | null>(null);
+  const [resettingTeacherId, setResettingTeacherId] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const deleteTeacherMutation = useDeleteTeacher();
+  const { toast } = useToast();
 
-  const loadTeachers = async () => {
+  const loadTeachers = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -60,11 +64,11 @@ export const TeachersView = ({ onViewSchedule }: TeachersViewProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadTeachers();
-  }, []);
+  }, [loadTeachers]);
 
   const filteredTeachers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -121,6 +125,32 @@ export const TeachersView = ({ onViewSchedule }: TeachersViewProps) => {
       await loadTeachers();
     } catch (error) {
       console.error('Error deleting teacher:', error);
+    }
+  };
+
+  const handleResetPassword = async (teacher: Teacher) => {
+    setResettingTeacherId(teacher.id);
+    try {
+      await resetUserPasswordToDefault({
+        email: teacher.email,
+      });
+
+      toast({
+        title: 'Senha resetada',
+        description: `${teacher.name} recebeu senha padrao 123456. Oriente a trocar na aba Seguranca.`,
+      });
+    } catch (error) {
+      console.error('Erro ao resetar senha:', error);
+      toast({
+        title: 'Erro ao resetar senha',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Nao foi possivel resetar a senha para o padrao.',
+        variant: 'destructive',
+      });
+    } finally {
+      setResettingTeacherId(null);
     }
   };
 
@@ -216,6 +246,21 @@ export const TeachersView = ({ onViewSchedule }: TeachersViewProps) => {
                       >
                         <Eye className="h-4 w-4" />
                         {isMobile && <span className="ml-2">Detalhes</span>}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-shrink-0"
+                        onClick={() => handleResetPassword(teacher)}
+                        title="Resetar senha"
+                        disabled={resettingTeacherId === teacher.id}
+                      >
+                        {resettingTeacherId === teacher.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <KeyRound className="h-4 w-4" />
+                        )}
+                        {isMobile && <span className="ml-2">Reset Senha</span>}
                       </Button>
                       <Button
                         variant="destructive"

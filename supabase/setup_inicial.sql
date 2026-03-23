@@ -16,7 +16,7 @@
 --   - Usa IF NOT EXISTS / DROP IF EXISTS para ser idempotente
 --   - Após rodar, crie o primeiro usuário admin pelo app
 --
--- Última atualização: 2026-03-19
+-- Última atualização: 2026-03-23
 -- ================================================================
 
 
@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS public.teachers (
   name TEXT NOT NULL,
   email TEXT NOT NULL,
   phone TEXT,
+  district TEXT,
   level public.teacher_level NOT NULL DEFAULT 'iniciante',
   has_international_certification BOOLEAN NOT NULL DEFAULT false,
   performance public.teacher_performance DEFAULT NULL,
@@ -100,6 +101,7 @@ CREATE TABLE IF NOT EXISTS public.teachers (
 );
 
 COMMENT ON TABLE public.teachers IS 'Dados completos do professor';
+COMMENT ON COLUMN public.teachers.district IS 'Distrito do professor para classificação e busca.';
 COMMENT ON COLUMN public.teachers.performance IS 'Desempenho em sala de aula - acesso restrito a admin';
 COMMENT ON COLUMN public.teachers.academic_background IS 'Formação acadêmica do professor';
 
@@ -300,6 +302,9 @@ ALTER TABLE public.special_lists DROP CONSTRAINT IF EXISTS special_lists_list_ty
 ALTER TABLE public.special_lists ADD CONSTRAINT special_lists_list_type_check
   CHECK (list_type IN ('ferias', 'licenca_medica', 'afastamento', 'outro', 'restricted', 'best'));
 
+-- TEACHERS: distrito do professor (migração 012)
+ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS district TEXT;
+
 
 -- ================================================================
 -- 4. FUNÇÕES AUXILIARES
@@ -407,6 +412,8 @@ COMMENT ON FUNCTION public.search_available_teachers IS
 CREATE OR REPLACE FUNCTION public.search_teachers_advanced(
   p_day_of_week INT DEFAULT NULL,
   p_hour INT DEFAULT NULL,
+  p_day_of_week_list INT[] DEFAULT NULL,
+  p_hour_list INT[] DEFAULT NULL,
   p_level TEXT DEFAULT NULL,
   p_has_certification BOOLEAN DEFAULT NULL,
   p_performance TEXT DEFAULT NULL,
@@ -419,6 +426,7 @@ RETURNS TABLE (
   name TEXT,
   email TEXT,
   phone TEXT,
+  district TEXT,
   level TEXT,
   has_international_certification BOOLEAN,
   performance TEXT,
@@ -433,6 +441,7 @@ BEGIN
     t.name,
     t.email,
     t.phone,
+    t.district,
     t.level::TEXT,
     t.has_international_certification,
     t.performance::TEXT,
@@ -442,24 +451,57 @@ BEGIN
   LEFT JOIN public.schedules s ON t.id = s.teacher_id
   LEFT JOIN public.teacher_lesson_types tlt ON t.id = tlt.teacher_id
   WHERE
-    (p_day_of_week IS NULL OR p_hour IS NULL OR (
-      s.day_of_week = p_day_of_week
-      AND s.hour = p_hour
-      AND s.status::TEXT = 'livre'
-    ))
+    (
+      (
+        (p_day_of_week IS NULL OR p_hour IS NULL)
+        OR (
+          p_day_of_week IS NOT NULL
+          AND p_hour IS NOT NULL
+          AND s.day_of_week = p_day_of_week
+          AND s.hour = p_hour
+          AND s.status::TEXT = 'livre'
+        )
+      )
+      AND (
+        p_day_of_week_list IS NULL
+        OR cardinality(p_day_of_week_list) = 0
+        OR s.day_of_week = ANY(p_day_of_week_list)
+      )
+      AND (
+        p_hour_list IS NULL
+        OR cardinality(p_hour_list) = 0
+        OR s.hour = ANY(p_hour_list)
+      )
+      AND (
+        (
+          (p_day_of_week_list IS NULL OR cardinality(p_day_of_week_list) = 0)
+          AND (p_hour_list IS NULL OR cardinality(p_hour_list) = 0)
+        )
+        OR s.status::TEXT = 'livre'
+      )
+    )
     AND (p_level IS NULL OR t.level::TEXT = p_level)
     AND (p_has_certification IS NULL OR t.has_international_certification = p_has_certification)
     AND (p_performance IS NULL OR t.performance::TEXT = p_performance)
     AND (p_lesson_type_ids IS NULL OR tlt.lesson_type_id = ANY(p_lesson_type_ids))
     AND (p_academic_background IS NULL OR t.academic_background ILIKE '%' || p_academic_background || '%')
-  GROUP BY t.id, t.user_id, t.name, t.email, t.phone, t.level,
+  GROUP BY t.id, t.user_id, t.name, t.email, t.phone, t.district, t.level,
            t.has_international_certification, t.performance, t.academic_background
   ORDER BY free_hours_count DESC, t.name;
 END;
 $fn$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
-COMMENT ON FUNCTION public.search_teachers_advanced IS
-  'Busca avançada de professores com múltiplos filtros. Usa cast explícito para enums.';
+COMMENT ON FUNCTION public.search_teachers_advanced(
+  INT,
+  INT,
+  INT[],
+  INT[],
+  TEXT,
+  BOOLEAN,
+  TEXT,
+  UUID[],
+  TEXT
+) IS 'Busca avançada de professores com filtros simples e múltiplos (dias/horários), incluindo distrito.';
 
 -- ------------------------------------------------
 -- 4.5 Obter tipos de aula de um professor
@@ -564,6 +606,53 @@ $fn$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
 COMMENT ON FUNCTION public.get_user_role IS
   'Retorna o role (admin/teacher) de um usuário pelo seu ID.';
+
+-- ------------------------------------------------
+-- 4.10 Reset de senha padrao por admin (sem e-mail)
+-- ------------------------------------------------
+CREATE OR REPLACE FUNCTION public.admin_reset_user_password_to_default(
+  p_user_email TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $fn$
+DECLARE
+  v_target_user_id UUID;
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE profiles.user_id = auth.uid()
+      AND profiles.role = 'admin'
+  ) THEN
+    RAISE EXCEPTION 'Apenas administradores podem resetar senhas';
+  END IF;
+
+  SELECT id
+  INTO v_target_user_id
+  FROM auth.users
+  WHERE email = p_user_email
+  LIMIT 1;
+
+  IF v_target_user_id IS NULL THEN
+    RAISE EXCEPTION 'Usuario nao encontrado para o e-mail informado';
+  END IF;
+
+  UPDATE auth.users
+  SET
+    encrypted_password = extensions.crypt('123456', extensions.gen_salt('bf')),
+    updated_at = NOW()
+  WHERE id = v_target_user_id;
+END;
+$fn$;
+
+REVOKE ALL ON FUNCTION public.admin_reset_user_password_to_default(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_reset_user_password_to_default(TEXT) TO authenticated;
+
+COMMENT ON FUNCTION public.admin_reset_user_password_to_default(TEXT) IS
+  'Permite que admin resete senha para o padrao 123456 sem envio de e-mail.';
 
 
 -- ================================================================
@@ -984,6 +1073,8 @@ ALTER TABLE public.teacher_lesson_types ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Everyone can view teacher lesson types" ON public.teacher_lesson_types;
 DROP POLICY IF EXISTS "Admin can insert teacher lesson types" ON public.teacher_lesson_types;
 DROP POLICY IF EXISTS "Admin can delete teacher lesson types" ON public.teacher_lesson_types;
+DROP POLICY IF EXISTS "Teachers can insert own teacher lesson types" ON public.teacher_lesson_types;
+DROP POLICY IF EXISTS "Teachers can delete own teacher lesson types" ON public.teacher_lesson_types;
 
 CREATE POLICY "Everyone can view teacher lesson types"
   ON public.teacher_lesson_types FOR SELECT
@@ -1006,6 +1097,26 @@ CREATE POLICY "Admin can delete teacher lesson types"
       SELECT 1 FROM public.profiles
       WHERE profiles.user_id = auth.uid()
       AND profiles.role = 'admin'
+    )
+  );
+
+CREATE POLICY "Teachers can insert own teacher lesson types"
+  ON public.teacher_lesson_types FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.teachers
+      WHERE teachers.id = teacher_id
+      AND teachers.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Teachers can delete own teacher lesson types"
+  ON public.teacher_lesson_types FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.teachers
+      WHERE teachers.id = public.teacher_lesson_types.teacher_id
+      AND teachers.user_id = auth.uid()
     )
   );
 

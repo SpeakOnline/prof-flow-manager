@@ -1,6 +1,18 @@
 import { supabase } from './client';
-import { AuthError, AuthResponse, User, type Session } from '@supabase/supabase-js';
+import type { AuthError, AuthResponse, User, Session } from '@supabase/supabase-js';
 import type { TeacherLevel, TeacherPerformance, Teacher } from './extended-types';
+
+const isMissingDistrictColumnError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object' || !('message' in error)) {
+    return false;
+  }
+
+  const message = String((error as { message?: unknown }).message || '').toLowerCase();
+  return (
+    message.includes("could not find the 'district' column")
+    || message.includes('column') && message.includes('district') && message.includes('schema cache')
+  );
+};
 
 export interface SignUpData {
   email: string;
@@ -12,6 +24,19 @@ export interface SignUpData {
 export interface SignInData {
   email: string;
   password: string;
+}
+
+export interface ChangePasswordData {
+  newPassword: string;
+}
+
+export interface AdminResetPasswordData {
+  email: string;
+  redirectTo?: string;
+}
+
+export interface AdminDefaultPasswordResetData {
+  email: string;
 }
 
 export interface CreateTeacherAsAdminData {
@@ -142,6 +167,9 @@ export const createTeacherAsAdmin = async (
   }
 
   console.log('[createTeacherAsAdmin] Admin autenticado:', adminSession.user.email);
+  const adminUserId = adminSession.user.id;
+  const adminAccessToken = adminSession.access_token;
+  const adminRefreshToken = adminSession.refresh_token;
 
   // Cria o usuário no Auth com autoConfirm: false para evitar eventos de login
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -168,25 +196,60 @@ export const createTeacherAsAdmin = async (
 
   console.log('[createTeacherAsAdmin] Usuário criado no Auth:', userId);
 
+  // Garante que a sessão ativa continue sendo a do admin.
+  // Em alguns cenários, o signUp pode trocar o contexto para o usuário recém-criado.
+  const { data: afterSignUpSessionData } = await supabase.auth.getSession();
+  const currentUserId = afterSignUpSessionData.session?.user?.id;
+  if (currentUserId && currentUserId !== adminUserId) {
+    const { error: restoreSessionError } = await supabase.auth.setSession({
+      access_token: adminAccessToken,
+      refresh_token: adminRefreshToken,
+    });
+
+    if (restoreSessionError) {
+      console.error('[createTeacherAsAdmin] Erro ao restaurar sessão do admin:', restoreSessionError);
+      throw new Error('Não foi possível restaurar a sessão do administrador. Faça login novamente.');
+    }
+
+    console.log('[createTeacherAsAdmin] Sessão do admin restaurada com sucesso');
+  }
+
   // Aguarda um pouco para o trigger criar o perfil
   await new Promise(resolve => setTimeout(resolve, 500));
 
-  // Insere o professor na tabela teachers
-  const { data: teacher, error: teacherError } = await supabase
+  // Insere o professor na tabela teachers.
+  // Fallback: se o banco ainda não tiver a coluna district, tenta novamente sem esse campo.
+  const teacherInsertData = {
+    user_id: userId,
+    name: data.name,
+    email: data.email,
+    phone: data.phone || null,
+    district: data.district || null,
+    level: data.level,
+    has_international_certification: data.hasInternationalCertification,
+    academic_background: data.academicBackground || null,
+    performance: data.performance || null,
+  };
+
+  let { data: teacher, error: teacherError } = await supabase
     .from('teachers')
-    .insert({
-      user_id: userId,
-      name: data.name,
-      email: data.email,
-      phone: data.phone || null,
-      district: data.district || null,
-      level: data.level,
-      has_international_certification: data.hasInternationalCertification,
-      academic_background: data.academicBackground || null,
-      performance: data.performance || null,
-    })
+    .insert(teacherInsertData)
     .select('*')
     .single();
+
+  if (teacherError && isMissingDistrictColumnError(teacherError)) {
+    console.warn('[createTeacherAsAdmin] Coluna district ausente no banco. Retentando sem district.');
+
+    const { district: _ignoredDistrict, ...teacherInsertWithoutDistrict } = teacherInsertData;
+    const retryResult = await supabase
+      .from('teachers')
+      .insert(teacherInsertWithoutDistrict)
+      .select('*')
+      .single();
+
+    teacher = retryResult.data;
+    teacherError = retryResult.error;
+  }
 
   if (teacherError) {
     console.error('[createTeacherAsAdmin] Erro ao criar professor:', teacherError);
@@ -213,6 +276,44 @@ export const signIn = async ({ email, password }: SignInData): Promise<AuthRespo
  */
 export const signOut = async (): Promise<{ error: AuthError | null }> => {
   return await supabase.auth.signOut();
+};
+
+/**
+ * Atualiza a senha do usuário autenticado
+ */
+export const changeCurrentUserPassword = async ({
+  newPassword,
+}: ChangePasswordData): Promise<{ error: AuthError | null }> => {
+  return await supabase.auth.updateUser({
+    password: newPassword,
+  });
+};
+
+/**
+ * Dispara e-mail de recuperação de senha para um usuário (fluxo admin)
+ */
+export const sendPasswordResetForUser = async ({
+  email,
+  redirectTo,
+}: AdminResetPasswordData): Promise<{ error: AuthError | null }> => {
+  return await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: redirectTo || window.location.origin,
+  });
+};
+
+/**
+ * Reseta a senha de um usuario para o padrao definido no banco (somente admin)
+ */
+export const resetUserPasswordToDefault = async ({
+  email,
+}: AdminDefaultPasswordResetData): Promise<void> => {
+  const { error } = await supabase.rpc('admin_reset_user_password_to_default', {
+    p_user_email: email,
+  });
+
+  if (error) {
+    throw error;
+  }
 };
 
 /**
@@ -257,7 +358,7 @@ export const getUserRole = async (userId: string): Promise<'admin' | 'teacher' |
       }
 
       // Se encontrou na tabela profiles, retorna
-      if (data && data.role) {
+      if (data?.role) {
         console.log('[getUserRole] Role encontrada na tabela profiles:', data.role);
         return data.role;
       }
