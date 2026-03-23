@@ -26,10 +26,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { EnhancedTeacherForm } from "@/components/Teachers/EnhancedTeacherForm";
 import type { Teacher } from "@/integrations/supabase/extended-types";
 import { TEACHER_LEVEL_LABELS } from "@/integrations/supabase/extended-types";
-import { useDeleteTeacher } from "@/hooks/useTeachers";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { resetUserPasswordToDefault } from "@/integrations/supabase/auth";
+import { deleteUser, resetUserPasswordToDefault } from "@/integrations/supabase/auth";
 
 interface TeachersViewProps {
   onViewSchedule?: (teacherId: string, teacherName: string) => void;
@@ -44,8 +43,8 @@ export const TeachersView = ({ onViewSchedule }: TeachersViewProps) => {
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [teacherToDelete, setTeacherToDelete] = useState<Teacher | null>(null);
   const [resettingTeacherId, setResettingTeacherId] = useState<string | null>(null);
+  const [deletingTeacherId, setDeletingTeacherId] = useState<string | null>(null);
   const isMobile = useIsMobile();
-  const deleteTeacherMutation = useDeleteTeacher();
   const { toast } = useToast();
 
   const loadTeachers = useCallback(async () => {
@@ -119,12 +118,29 @@ export const TeachersView = ({ onViewSchedule }: TeachersViewProps) => {
     if (!teacherToDelete) return;
 
     try {
-      await deleteTeacherMutation.mutateAsync(teacherToDelete.id);
+      setDeletingTeacherId(teacherToDelete.id);
+      await deleteUser({ userId: teacherToDelete.user_id });
+
+      toast({
+        title: 'Usuario removido',
+        description: `${teacherToDelete.name} foi removido com sucesso.`,
+      });
+
       setIsDeleteDialogOpen(false);
       setTeacherToDelete(null);
       await loadTeachers();
     } catch (error) {
       console.error('Error deleting teacher:', error);
+      toast({
+        title: 'Erro ao remover usuario',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Nao foi possivel remover o usuario.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingTeacherId(null);
     }
   };
 
@@ -322,9 +338,9 @@ export const TeachersView = ({ onViewSchedule }: TeachersViewProps) => {
             <AlertDialogAction
               onClick={handleDeleteTeacher}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteTeacherMutation.isPending}
+              disabled={deletingTeacherId === teacherToDelete?.id}
             >
-              {deleteTeacherMutation.isPending ? 'Excluindo...' : 'Excluir'}
+              {deletingTeacherId === teacherToDelete?.id ? 'Excluindo...' : 'Excluir'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
