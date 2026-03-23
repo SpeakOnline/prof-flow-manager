@@ -57,6 +57,12 @@ export const Sidebar = ({ userRole, activeTab, onTabChange, className }: Sidebar
       roles: ['admin']
     },
     {
+      id: 'users',
+      label: 'Usuarios',
+      icon: Users,
+      roles: ['admin']
+    },
+    {
       id: 'lesson-types',
       label: 'Tipos de Aula',
       icon: BookOpen,

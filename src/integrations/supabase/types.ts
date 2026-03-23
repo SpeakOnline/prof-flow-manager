@@ -294,6 +294,16 @@ export type Database = {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
+        list_all_users: {
+          Args: Record<PropertyKey, never>
+          Returns: Array<{
+            user_id: string
+            name: string
+            email: string
+            role: Database["public"]["Enums"]["user_role"]
+            created_at: string
+          }>
+        }
       search_teachers_advanced: {
         Args: {
           p_day_of_week?: number | null
