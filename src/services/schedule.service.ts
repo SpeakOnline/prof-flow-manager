@@ -12,6 +12,95 @@ type Schedule = Database['public']['Tables']['schedules']['Row'];
 type ScheduleInsert = Database['public']['Tables']['schedules']['Insert'];
 type ScheduleUpdate = Database['public']['Tables']['schedules']['Update'];
 
+const toMinutes = (hour: number, minute = 0): number => hour * 60 + minute;
+
+const hasTimeOverlap = (
+  startA: number,
+  endA: number,
+  startB: number,
+  endB: number
+): boolean => startA < endB && endA > startB;
+
+const validateScheduleConflicts = async (schedules: ScheduleInsert[]): Promise<void> => {
+  if (schedules.length === 0) return;
+
+  type Candidate = {
+    teacherId: string;
+    dayOfWeek: number;
+    start: number;
+    end: number;
+    label: string;
+  };
+
+  const candidates: Candidate[] = schedules.map((schedule) => {
+    const startMinute = schedule.minute ?? 0;
+    const endHour = schedule.end_hour ?? schedule.hour + 1;
+    const endMinute = schedule.end_minute ?? 0;
+    const start = toMinutes(schedule.hour, startMinute);
+    const end = toMinutes(endHour, endMinute);
+
+    if (end <= start) {
+      throw new Error('Horario invalido: o termino deve ser maior que o inicio.');
+    }
+
+    return {
+      teacherId: schedule.teacher_id,
+      dayOfWeek: schedule.day_of_week,
+      start,
+      end,
+      label: `${String(schedule.hour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')} - ${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`,
+    };
+  });
+
+  // Conflitos entre os próprios novos horários
+  for (let i = 0; i < candidates.length; i += 1) {
+    for (let j = i + 1; j < candidates.length; j += 1) {
+      const a = candidates[i];
+      const b = candidates[j];
+      if (a.teacherId !== b.teacherId || a.dayOfWeek !== b.dayOfWeek) continue;
+      if (hasTimeOverlap(a.start, a.end, b.start, b.end)) {
+        throw new Error(`Conflito entre horarios selecionados no dia ${a.dayOfWeek}: ${a.label} e ${b.label}.`);
+      }
+    }
+  }
+
+  // Conflitos com horários já cadastrados (incluindo livres)
+  const teacherIds = Array.from(new Set(candidates.map((c) => c.teacherId)));
+  for (const teacherId of teacherIds) {
+    const days = Array.from(
+      new Set(candidates.filter((c) => c.teacherId === teacherId).map((c) => c.dayOfWeek))
+    );
+
+    const { data: existingSchedules, error } = await supabase
+      .from('schedules')
+      .select('teacher_id, day_of_week, hour, minute, end_hour, end_minute')
+      .eq('teacher_id', teacherId)
+      .in('day_of_week', days);
+
+    if (error) {
+      console.error('Error checking schedule conflicts:', error);
+      throw new Error('Erro ao verificar conflitos de horario');
+    }
+
+    const existing = existingSchedules || [];
+    for (const candidate of candidates.filter((c) => c.teacherId === teacherId)) {
+      const conflict = existing.find((item) => {
+        if (item.day_of_week !== candidate.dayOfWeek) return false;
+        const itemStart = toMinutes(item.hour, item.minute ?? 0);
+        const itemEnd = toMinutes(item.end_hour, item.end_minute ?? 0);
+        return hasTimeOverlap(candidate.start, candidate.end, itemStart, itemEnd);
+      });
+
+      if (conflict) {
+        const conflictLabel = `${String(conflict.hour).padStart(2, '0')}:${String(conflict.minute ?? 0).padStart(2, '0')} - ${String(conflict.end_hour).padStart(2, '0')}:${String(conflict.end_minute ?? 0).padStart(2, '0')}`;
+        throw new Error(
+          `Conflito de agenda no dia ${candidate.dayOfWeek}: ${candidate.label} conflita com horario existente ${conflictLabel}.`
+        );
+      }
+    }
+  }
+};
+
 /**
  * Busca todos os horários de um professor ou todos os horários (para admin)
  *
@@ -119,6 +208,8 @@ export async function findAvailableTeachers(
  * @returns Horário criado
  */
 export async function createSchedule(schedule: ScheduleInsert): Promise<Schedule> {
+  await validateScheduleConflicts([schedule]);
+
   const { data, error } = await supabase
     .from('schedules')
     .insert(schedule)
@@ -224,6 +315,8 @@ export async function deleteSchedule(id: string): Promise<void> {
  * @returns Array de horários criados
  */
 export async function createSchedulesBulk(schedules: ScheduleInsert[]): Promise<Schedule[]> {
+  await validateScheduleConflicts(schedules);
+
   const { data, error } = await supabase
     .from('schedules')
     .insert(schedules)

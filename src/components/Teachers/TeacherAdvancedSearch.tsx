@@ -36,7 +36,7 @@ import {
   TEACHER_LEVEL_LABELS,
   TEACHER_PERFORMANCE_LABELS,
 } from '@/integrations/supabase/extended-types';
-import { Search, Loader2, Calendar } from 'lucide-react';
+import { Search, Loader2, Calendar, Plus, X } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthContext';
 
 interface TeacherAdvancedSearchProps {
@@ -53,14 +53,46 @@ const DAYS_OF_WEEK = [
   { value: 0, label: 'Domingo' },
 ];
 
-const HOURS = Array.from({ length: 15 }, (_, i) => i + 8); // 8-22
+const rangeToHourList = (timeRanges: string[]): number[] => {
+  const hours = new Set<number>();
+
+  timeRanges.forEach((range) => {
+    const [start, end] = range.split('-');
+    if (!start || !end) return;
+
+    const [startHour, startMinute] = start.split(':').map(Number);
+    const [endHour, endMinute] = end.split(':').map(Number);
+    if ([startHour, startMinute, endHour, endMinute].some(Number.isNaN)) return;
+
+    const startTotal = startHour * 60 + startMinute;
+    const endTotal = endHour * 60 + endMinute;
+    if (endTotal <= startTotal) return;
+
+    for (let hour = startHour; hour <= endHour; hour += 1) {
+      const hourStart = hour * 60;
+      const hourEnd = (hour + 1) * 60;
+      // Inclui a hora se o range tiver interseção com ela
+      if (startTotal < hourEnd && endTotal > hourStart) {
+        hours.add(hour);
+      }
+    }
+  });
+
+  return Array.from(hours).sort((a, b) => a - b);
+};
 
 export const TeacherAdvancedSearch = ({ onViewSchedule }: TeacherAdvancedSearchProps) => {
   const [filters, setFilters] = useState<TeacherSearchFilters>({});
   const [results, setResults] = useState<TeacherSearchResult[]>([]);
   const [lessonTypes, setLessonTypes] = useState<LessonType[]>([]);
   const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<number[]>([]);
-  const [selectedHours, setSelectedHours] = useState<number[]>([]);
+  const [selectedTimeRanges, setSelectedTimeRanges] = useState<string[]>([]);
+  const [newTimeInput, setNewTimeInput] = useState({
+    startHour: '08',
+    startMinute: '00',
+    endHour: '09',
+    endMinute: '00',
+  });
   const [selectedLessonTypes, setSelectedLessonTypes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -87,7 +119,10 @@ export const TeacherAdvancedSearch = ({ onViewSchedule }: TeacherAdvancedSearchP
       const searchFilters: TeacherSearchFilters = {
         ...filters,
         dayOfWeekList: selectedDaysOfWeek.length > 0 ? selectedDaysOfWeek : undefined,
-        hourList: selectedHours.length > 0 ? selectedHours : undefined,
+        hourList:
+          selectedTimeRanges.length > 0
+            ? rangeToHourList(selectedTimeRanges)
+            : undefined,
         dayOfWeek: undefined,
         hour: undefined,
         lessonTypeIds: selectedLessonTypes.length > 0 ? selectedLessonTypes : undefined,
@@ -123,7 +158,7 @@ export const TeacherAdvancedSearch = ({ onViewSchedule }: TeacherAdvancedSearchP
   const clearFilters = () => {
     setFilters({});
     setSelectedDaysOfWeek([]);
-    setSelectedHours([]);
+    setSelectedTimeRanges([]);
     setSelectedLessonTypes([]);
     setResults([]);
   };
@@ -134,10 +169,33 @@ export const TeacherAdvancedSearch = ({ onViewSchedule }: TeacherAdvancedSearchP
     );
   };
 
-  const handleToggleHour = (hour: number) => {
-    setSelectedHours((prev) =>
-      prev.includes(hour) ? prev.filter((h) => h !== hour) : [...prev, hour]
-    );
+  const handleAddTimeRange = () => {
+    const startTime = `${newTimeInput.startHour.padStart(2, '0')}:${newTimeInput.startMinute.padStart(2, '0')}`;
+    const endTime = `${newTimeInput.endHour.padStart(2, '0')}:${newTimeInput.endMinute.padStart(2, '0')}`;
+    const rangeLabel = `${startTime}-${endTime}`;
+
+    const startTotal = Number(newTimeInput.startHour) * 60 + Number(newTimeInput.startMinute);
+    const endTotal = Number(newTimeInput.endHour) * 60 + Number(newTimeInput.endMinute);
+
+    if (Number.isNaN(startTotal) || Number.isNaN(endTotal) || endTotal <= startTotal) {
+      toast({
+        title: 'Range invalido',
+        description: 'Informe um horario final maior que o inicial.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSelectedTimeRanges((prev) => {
+      if (prev.includes(rangeLabel)) {
+        return prev;
+      }
+      return [...prev, rangeLabel].sort();
+    });
+  };
+
+  const handleRemoveTimeRange = (rangeLabel: string) => {
+    setSelectedTimeRanges((prev) => prev.filter((range) => range !== rangeLabel));
   };
 
   return (
@@ -179,19 +237,79 @@ export const TeacherAdvancedSearch = ({ onViewSchedule }: TeacherAdvancedSearchP
               <div>
                 <Label>Horários</Label>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Selecione um ou mais horários
+                  Adicione um ou mais ranges de horários
                 </p>
-                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1">
-                  {HOURS.map((hour) => (
-                    <Badge
-                      key={hour}
-                      variant={selectedHours.includes(hour) ? 'default' : 'outline'}
-                      className="cursor-pointer"
-                      onClick={() => handleToggleHour(hour)}
-                    >
-                      {hour}:00
-                    </Badge>
-                  ))}
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="23"
+                      value={newTimeInput.startHour}
+                      onChange={(e) =>
+                        setNewTimeInput((prev) => ({ ...prev, startHour: e.target.value }))
+                      }
+                      className="w-20"
+                      placeholder="HH"
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={newTimeInput.startMinute}
+                      onChange={(e) =>
+                        setNewTimeInput((prev) => ({ ...prev, startMinute: e.target.value }))
+                      }
+                      className="w-20"
+                      placeholder="MM"
+                    />
+                    <span className="text-muted-foreground">até</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="23"
+                      value={newTimeInput.endHour}
+                      onChange={(e) =>
+                        setNewTimeInput((prev) => ({ ...prev, endHour: e.target.value }))
+                      }
+                      className="w-20"
+                      placeholder="HH"
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={newTimeInput.endMinute}
+                      onChange={(e) =>
+                        setNewTimeInput((prev) => ({ ...prev, endMinute: e.target.value }))
+                      }
+                      className="w-20"
+                      placeholder="MM"
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={handleAddTimeRange}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Adicionar
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1">
+                    {selectedTimeRanges.map((timeRange) => (
+                      <Badge key={timeRange} variant="default" className="gap-1 pr-1">
+                        {timeRange.replace('-', ' - ')}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTimeRange(timeRange)}
+                          className="rounded p-0.5 hover:bg-primary-foreground/20"
+                          aria-label={`Remover range ${timeRange}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                    {selectedTimeRanges.length === 0 && (
+                      <p className="text-xs text-muted-foreground">Nenhum range adicionado</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
