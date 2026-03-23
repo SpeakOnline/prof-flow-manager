@@ -12,7 +12,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useTeacherSchedules, useBookSchedule, useFreeSchedule, useMarkScheduleUnavailable, useCreateSchedulesBulk, useDeleteSchedule } from "@/hooks/useSchedules";
 import { useTeachers, useTeacher, useTeacherByUserId } from "@/hooks/useTeachers";
 import { useTeacherRestriction } from "@/hooks/useSpecialLists";
-import { updateLastScheduleAccess } from "@/services/teacher.service";
+import { ensureTeacherProfileForUser, updateLastScheduleAccess } from "@/services/teacher.service";
 import { Database } from "@/integrations/supabase/types";
 
 type Schedule = Database['public']['Tables']['schedules']['Row'];
@@ -20,6 +20,7 @@ type Schedule = Database['public']['Tables']['schedules']['Row'];
 interface ScheduleViewProps {
   user: {
     id: string;
+    email: string;
     name: string;
     role: 'admin' | 'teacher';
   };
@@ -107,22 +108,71 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
     endHour: '09',
     endMinute: '00'
   });
+  const [isEnsuringTeacherProfile, setIsEnsuringTeacherProfile] = useState(false);
   const isMobile = useIsMobile();
 
-  // Busca o teacher pelo user_id (para quando o professor acessa sua própria agenda)
-  const { data: currentTeacher } = useTeacherByUserId(user.role === 'teacher' ? user.id : '');
+  // Busca o teacher pelo user_id (para professor e admin terem agenda própria)
+  const {
+    data: currentTeacher,
+    isLoading: currentTeacherLoading,
+    refetch: refetchCurrentTeacher,
+  } = useTeacherByUserId(user.id);
+
+  // Para admin sem registro em teachers, cria automaticamente um perfil para permitir agenda própria.
+  useEffect(() => {
+    if (
+      user.role !== 'admin'
+      || !!selectedTeacherId
+      || !!currentTeacher
+      || currentTeacherLoading
+      || isEnsuringTeacherProfile
+    ) {
+      return;
+    }
+
+    let active = true;
+    setIsEnsuringTeacherProfile(true);
+
+    ensureTeacherProfileForUser(user.id, user.name, user.email)
+      .then(() => {
+        if (active) {
+          refetchCurrentTeacher();
+        }
+      })
+      .catch((err) => {
+        console.error('Error ensuring admin teacher profile:', err);
+      })
+      .finally(() => {
+        if (active) {
+          setIsEnsuringTeacherProfile(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    currentTeacher,
+    currentTeacherLoading,
+    isEnsuringTeacherProfile,
+    refetchCurrentTeacher,
+    selectedTeacherId,
+    user.email,
+    user.id,
+    user.name,
+    user.role,
+  ]);
   
   // Determina qual teacher ID usar para buscar agendas
   // - Se admin selecionou um professor específico, usa esse ID
-  // - Se é professor, usa o teacher_id da tabela teachers (não o user.id)
-  // - Se é admin sem seleção, busca todos (undefined)
-  const effectiveTeacherId = selectedTeacherId || (user.role === 'teacher' ? currentTeacher?.id : undefined);
+  // - Caso contrário, usa o teacher_id do próprio usuário (admin/teacher)
+  const effectiveTeacherId = selectedTeacherId || currentTeacher?.id;
   
   // Busca informações do professor selecionado (se houver)
   const { data: teacherData } = useTeacher(selectedTeacherId || '');
   
   // Nome do professor para exibir no cabeçalho
-  const displayTeacherName = selectedTeacherName || teacherData?.name || (user.role === 'teacher' ? (currentTeacher?.name || user.name) : null);
+  const displayTeacherName = selectedTeacherName || teacherData?.name || currentTeacher?.name || user.name;
 
   // Registrar acesso do professor à agenda
   useEffect(() => {
@@ -142,8 +192,8 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
   // Fetch schedules for the effective teacher
   const { data: schedules, isLoading: schedulesLoading, error } = useTeacherSchedules(effectiveTeacherId);
   
-  // Loading state inclui a busca do teacher atual para professores
-  const isLoading = schedulesLoading || (user.role === 'teacher' && !currentTeacher && !error);
+  // Loading inclui busca/criação do perfil de agenda do usuário
+  const isLoading = schedulesLoading || currentTeacherLoading || isEnsuringTeacherProfile;
 
   // Fetch teachers list (for admin to select teacher)
   const { data: teachers } = useTeachers();
@@ -152,7 +202,9 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
   const { data: teacherRestriction } = useTeacherRestriction(effectiveTeacherId || '');
 
   // Verifica restrição para o professor selecionado no formulário de criação (admin sem professor pré-selecionado)
-  const createFormTeacherId = user.role === 'admin' && !selectedTeacherId ? createForm.teacherId : '';
+  const createFormTeacherId = user.role === 'admin' && !selectedTeacherId
+    ? (createForm.teacherId || currentTeacher?.id || '')
+    : '';
   const { data: createFormTeacherRestriction } = useTeacherRestriction(createFormTeacherId);
 
   // Restrição ativa: usa a do formulário de criação (quando admin seleciona professor no form) ou a do professor efetivo
@@ -260,7 +312,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
     // Reset form with default values
     // Se admin está vendo a agenda de um professor específico, pré-seleciona esse professor
     // Se é professor, usa o teacher_id da tabela teachers
-    const defaultTeacherId = selectedTeacherId || (user.role === 'teacher' ? currentTeacher?.id || '' : '');
+    const defaultTeacherId = selectedTeacherId || currentTeacher?.id || '';
     
     setCreateForm({
       teacherId: defaultTeacherId,
@@ -340,7 +392,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
 
   const handleCreateSchedule = async () => {
     // Validation
-    if (user.role === 'admin' && !createForm.teacherId && !selectedTeacherId) {
+    if (user.role === 'admin' && !createForm.teacherId && !selectedTeacherId && !currentTeacher?.id) {
       return; // Should show error, but button will be disabled
     }
 
@@ -348,11 +400,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
       return; // Button will be disabled
     }
 
-    // Se é professor, usa o teacher_id da tabela teachers (não o user.id)
-    // Se admin está visualizando agenda específica, usa o professor selecionado
-    const teacherId = user.role === 'teacher' 
-      ? currentTeacher?.id 
-      : (selectedTeacherId || createForm.teacherId);
+    const teacherId = selectedTeacherId || createForm.teacherId || currentTeacher?.id;
 
     if (!teacherId) {
       console.error('No teacher ID available');
@@ -389,7 +437,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
 
   // Título da agenda baseado no contexto
   const getScheduleTitle = () => {
-    if (user.role === 'teacher') {
+    if (!selectedTeacherId && effectiveTeacherId) {
       return 'Minha Agenda';
     }
     if (selectedTeacherId && displayTeacherName) {
@@ -430,7 +478,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
             </Button>
           </CardTitle>
           {/* Descrição para admin quando visualiza agenda geral */}
-          {user.role === 'admin' && !selectedTeacherId && (
+          {user.role === 'admin' && !selectedTeacherId && !effectiveTeacherId && (
             <CardDescription className="mt-2">
               Visualize as agendas de todos os professores. Use a busca avançada para encontrar um professor específico.
             </CardDescription>
@@ -454,7 +502,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
           )}
 
           {/* Mensagem quando admin não selecionou professor e não há dados */}
-          {!isLoading && !error && user.role === 'admin' && !selectedTeacherId && Object.keys(transformedSchedule).every(day => transformedSchedule[day].length === 0) && (
+          {!isLoading && !error && user.role === 'admin' && !selectedTeacherId && !effectiveTeacherId && Object.keys(transformedSchedule).every(day => transformedSchedule[day].length === 0) && (
             <div className="text-center py-12">
               <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">Selecione um Professor</h3>
@@ -467,7 +515,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
             </div>
           )}
 
-          {!isLoading && !error && (selectedTeacherId || user.role === 'teacher' || Object.keys(transformedSchedule).some(day => transformedSchedule[day].length > 0)) && (
+          {!isLoading && !error && ((!!effectiveTeacherId) || Object.keys(transformedSchedule).some(day => transformedSchedule[day].length > 0)) && (
             <ScheduleGrid
               schedule={transformedSchedule}
               onSlotClick={handleSlotClick}

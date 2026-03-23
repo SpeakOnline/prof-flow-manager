@@ -72,7 +72,7 @@ export const Dashboard = ({ user }: DashboardProps) => {
   const renderContent = () => {
     switch (activeTab) {
       case 'schedule':
-        // Admin não tem agenda própria, apenas visualiza as dos professores
+        // Admin também pode ter agenda própria; sem seleção, exibe sua própria agenda
         if (user.role === 'admin') {
           return (
             <ScheduleView 

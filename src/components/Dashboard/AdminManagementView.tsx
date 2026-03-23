@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { UserPlus, Loader2, ShieldCheck, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { resetUserPasswordToDefault, signUp } from '@/integrations/supabase/auth';
 
 export const AdminManagementView = () => {
@@ -83,6 +84,27 @@ export const AdminManagementView = () => {
           variant: 'destructive',
         });
         return;
+      }
+
+      if (data.user?.id) {
+        const { error: teacherError } = await supabase
+          .from('teachers')
+          .insert({
+            user_id: data.user.id,
+            name: formData.name.trim(),
+            email: formData.email.trim(),
+            level: 'intermediario',
+            has_international_certification: false,
+          });
+
+        if (teacherError) {
+          console.error('Erro ao preparar agenda para administrador:', teacherError);
+          toast({
+            title: 'Administrador criado com alerta',
+            description: 'Conta criada, mas houve falha ao preparar agenda inicial. O sistema tentará criar automaticamente ao abrir Agenda.',
+            variant: 'destructive',
+          });
+        }
       }
 
       toast({

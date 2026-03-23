@@ -80,6 +80,51 @@ export async function getTeacherByUserId(userId: string): Promise<Teacher | null
 }
 
 /**
+ * Garante que exista um registro na tabela teachers para o usuário informado.
+ * Se já existir, retorna o registro existente.
+ *
+ * @param userId - ID do usuário (auth.users)
+ * @param name - Nome para cadastro inicial
+ * @param email - E-mail para cadastro inicial
+ * @returns Dados do professor existente ou criado
+ */
+export async function ensureTeacherProfileForUser(
+  userId: string,
+  name: string,
+  email: string
+): Promise<Teacher> {
+  const existingTeacher = await getTeacherByUserId(userId);
+  if (existingTeacher) {
+    return existingTeacher;
+  }
+
+  const { data, error } = await supabase
+    .from('teachers')
+    .insert({
+      user_id: userId,
+      name,
+      email,
+      level: 'intermediario',
+      has_international_certification: false,
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    // Em caso de corrida, tenta buscar novamente o registro criado por outra requisição
+    const teacherAfterError = await getTeacherByUserId(userId);
+    if (teacherAfterError) {
+      return teacherAfterError;
+    }
+
+    console.error('Error ensuring teacher profile:', error);
+    throw new Error('Nao foi possivel preparar agenda para este usuario');
+  }
+
+  return data;
+}
+
+/**
  * Busca professores por nível de proficiência
  *
  * @param level - Nível de proficiência
