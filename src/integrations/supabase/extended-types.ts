@@ -45,7 +45,10 @@ export interface TeacherSearchFilters {
   dayOfWeek?: number;
   hour?: number;
   dayOfWeekList?: number[];
-  hourList?: number[];
+  /** Start of each requested time range, in minutes from midnight (e.g. 17:00 → 1020). */
+  timeRangeStarts?: number[];
+  /** End of each requested time range, in minutes from midnight (e.g. 18:00 → 1080). */
+  timeRangeEnds?: number[];
   level?: TeacherLevel;
   hasCertification?: boolean;
   performance?: TeacherPerformance;
