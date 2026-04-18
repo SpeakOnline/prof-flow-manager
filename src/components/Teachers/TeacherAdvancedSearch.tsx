@@ -53,34 +53,6 @@ const DAYS_OF_WEEK = [
   { value: 0, label: 'Domingo' },
 ];
 
-const rangeToHourList = (timeRanges: string[]): number[] => {
-  const hours = new Set<number>();
-
-  timeRanges.forEach((range) => {
-    const [start, end] = range.split('-');
-    if (!start || !end) return;
-
-    const [startHour, startMinute] = start.split(':').map(Number);
-    const [endHour, endMinute] = end.split(':').map(Number);
-    if ([startHour, startMinute, endHour, endMinute].some(Number.isNaN)) return;
-
-    const startTotal = startHour * 60 + startMinute;
-    const endTotal = endHour * 60 + endMinute;
-    if (endTotal <= startTotal) return;
-
-    for (let hour = startHour; hour <= endHour; hour += 1) {
-      const hourStart = hour * 60;
-      const hourEnd = (hour + 1) * 60;
-      // Inclui a hora se o range tiver interseção com ela
-      if (startTotal < hourEnd && endTotal > hourStart) {
-        hours.add(hour);
-      }
-    }
-  });
-
-  return Array.from(hours).sort((a, b) => a - b);
-};
-
 export const TeacherAdvancedSearch = ({ onViewSchedule }: TeacherAdvancedSearchProps) => {
   const [filters, setFilters] = useState<TeacherSearchFilters>({});
   const [results, setResults] = useState<TeacherSearchResult[]>([]);
@@ -119,10 +91,6 @@ export const TeacherAdvancedSearch = ({ onViewSchedule }: TeacherAdvancedSearchP
       const searchFilters: TeacherSearchFilters = {
         ...filters,
         dayOfWeekList: selectedDaysOfWeek.length > 0 ? selectedDaysOfWeek : undefined,
-        hourList:
-          selectedTimeRanges.length > 0
-            ? rangeToHourList(selectedTimeRanges)
-            : undefined,
         timeRanges: selectedTimeRanges.length > 0 ? selectedTimeRanges : undefined,
         dayOfWeek: undefined,
         hour: undefined,
