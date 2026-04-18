@@ -164,12 +164,12 @@ export const UsersListView = () => {
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               {filteredUsers.map((user) => (
-                <Card key={user.user_id} className="border border-border/70">
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
+                <Card key={user.user_id} className="h-full min-h-[155px] border border-border/70">
+                  <CardContent className="flex h-full flex-col gap-3 p-4">
+                    <div className="flex items-start justify-between gap-3 min-h-[58px]">
+                      <div className="min-w-0">
                         <p className="font-semibold text-foreground">{user.name || 'Sem nome'}</p>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
                           <Mail className="h-3.5 w-3.5" />
                           {user.email || 'Sem e-mail'}
                         </p>
@@ -178,7 +178,7 @@ export const UsersListView = () => {
                         {user.role === 'admin' ? 'Administrador' : 'Professor'}
                       </Badge>
                     </div>
-                    <div className="flex items-start justify-between pt-2">
+                    <div className="mt-auto flex items-start justify-between pt-2">
                       <p className="text-xs text-muted-foreground">
                         Criado em {new Date(user.created_at).toLocaleDateString('pt-BR')}
                       </p>

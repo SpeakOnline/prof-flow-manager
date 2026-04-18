@@ -101,17 +101,17 @@ export const TeacherAdvancedSearch = ({ onViewSchedule }: TeacherAdvancedSearchP
   const isAdmin = role === 'admin';
 
   useEffect(() => {
+    const loadLessonTypes = async () => {
+      try {
+        const data = await fetchLessonTypes();
+        setLessonTypes(data);
+      } catch (error) {
+        console.error('Error loading lesson types:', error);
+      }
+    };
+
     loadLessonTypes();
   }, []);
-
-  const loadLessonTypes = async () => {
-    try {
-      const data = await fetchLessonTypes();
-      setLessonTypes(data);
-    } catch (error) {
-      console.error('Error loading lesson types:', error);
-    }
-  };
 
   const handleSearch = async () => {
     setLoading(true);
@@ -123,6 +123,7 @@ export const TeacherAdvancedSearch = ({ onViewSchedule }: TeacherAdvancedSearchP
           selectedTimeRanges.length > 0
             ? rangeToHourList(selectedTimeRanges)
             : undefined,
+        timeRanges: selectedTimeRanges.length > 0 ? selectedTimeRanges : undefined,
         dayOfWeek: undefined,
         hour: undefined,
         lessonTypeIds: selectedLessonTypes.length > 0 ? selectedLessonTypes : undefined,

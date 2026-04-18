@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Filter, Clock } from "lucide-react";
+import { Search, Clock } from "lucide-react";
 
 interface SearchViewProps {
   userRole: 'admin' | 'teacher';
@@ -53,7 +53,7 @@ const mockAvailability: TeacherAvailability[] = [
   }
 ];
 
-export const SearchView = ({ userRole }: SearchViewProps) => {
+export const SearchView = ({ userRole: _userRole }: SearchViewProps) => {
   const [searchFilters, setSearchFilters] = useState({
     day: '',
     time: '',
@@ -193,24 +193,24 @@ export const SearchView = ({ userRole }: SearchViewProps) => {
           <CardContent>
             <div className="grid gap-4">
               {results.map((item) => (
-                <Card key={`${item.id}-${item.time}-${item.day}`} className="transition-smooth hover:shadow-custom-md">
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="flex items-center space-x-4">
+                <Card key={`${item.id}-${item.time}-${item.day}`} className="h-full min-h-[120px] transition-smooth hover:shadow-custom-md">
+                  <CardContent className="flex h-full flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 items-center space-x-4">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className="bg-primary text-primary-foreground">
                           {item.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
                       
-                      <div>
-                        <h3 className="font-semibold text-foreground">{item.name}</h3>
-                        <p className="text-sm text-muted-foreground">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-foreground truncate">{item.name}</h3>
+                        <p className="text-sm text-muted-foreground truncate">
                           {item.day} - {item.time}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="mt-auto flex flex-wrap items-center gap-2 sm:mt-0 sm:justify-end">
                       <Badge variant="secondary">
                         {item.level}
                       </Badge>

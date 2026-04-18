@@ -209,16 +209,16 @@ export const TeachersView = ({ onViewSchedule }: TeachersViewProps) => {
           ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredTeachers.map((teacher) => (
-              <Card key={teacher.id} className="transition-smooth hover:shadow-custom-md">
-                <CardContent className={`flex ${isMobile ? 'flex-col' : 'items-center justify-between'} p-4 ${isMobile ? 'gap-3' : 'gap-4'}`}>
-                  <div className={`flex items-center ${isMobile ? 'space-x-3' : 'space-x-4'} w-full`}>
+              <Card key={teacher.id} className="h-full min-h-[250px] transition-smooth hover:shadow-custom-md">
+                <CardContent className="flex h-full flex-col space-y-4 p-4">
+                  <div className="flex items-center gap-3 sm:gap-4">
                     <Avatar className="h-12 w-12">
                       <AvatarFallback className="bg-primary text-primary-foreground">
                         {teacher.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
                     
-                    <div className="overflow-hidden">
+                    <div className="min-w-0 flex-1 overflow-hidden min-h-[84px]">
                       <h3 className="font-semibold text-foreground truncate">{teacher.name}</h3>
                       <p className="text-sm text-muted-foreground truncate">{teacher.email}</p>
                       {teacher.phone && (
@@ -229,7 +229,8 @@ export const TeachersView = ({ onViewSchedule }: TeachersViewProps) => {
                       )}
                     </div>
                   </div>
-                  <div className={`flex ${isMobile ? 'w-full justify-between flex-wrap' : 'items-center'} gap-2`}>
+
+                  <div className="flex flex-wrap items-center gap-2">
                     <Badge className={getLevelColor(teacher.level)}>
                       {TEACHER_LEVEL_LABELS[teacher.level]}
                     </Badge>
@@ -239,56 +240,56 @@ export const TeachersView = ({ onViewSchedule }: TeachersViewProps) => {
                         Certificado
                       </Badge>
                     )}
+                  </div>
 
-                    <div className="flex gap-1">
-                      {onViewSchedule && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-shrink-0"
-                          onClick={() => onViewSchedule(teacher.id, teacher.name)}
-                          title="Ver Agenda"
-                        >
-                          <Calendar className="h-4 w-4" />
-                          {isMobile && <span className="ml-2">Agenda</span>}
-                        </Button>
+                  <div className="mt-auto flex flex-wrap gap-2">
+                    {onViewSchedule && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-shrink-0"
+                        onClick={() => onViewSchedule(teacher.id, teacher.name)}
+                        title="Ver Agenda"
+                      >
+                        <Calendar className="h-4 w-4" />
+                        {isMobile && <span className="ml-2">Agenda</span>}
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-shrink-0"
+                      onClick={() => handleEditTeacher(teacher)}
+                      title="Ver Detalhes"
+                    >
+                      <Eye className="h-4 w-4" />
+                      {isMobile && <span className="ml-2">Detalhes</span>}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-shrink-0"
+                      onClick={() => handleResetPassword(teacher)}
+                      title="Resetar senha"
+                      disabled={resettingTeacherId === teacher.id}
+                    >
+                      {resettingTeacherId === teacher.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <KeyRound className="h-4 w-4" />
                       )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-shrink-0"
-                        onClick={() => handleEditTeacher(teacher)}
-                        title="Ver Detalhes"
-                      >
-                        <Eye className="h-4 w-4" />
-                        {isMobile && <span className="ml-2">Detalhes</span>}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-shrink-0"
-                        onClick={() => handleResetPassword(teacher)}
-                        title="Resetar senha"
-                        disabled={resettingTeacherId === teacher.id}
-                      >
-                        {resettingTeacherId === teacher.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <KeyRound className="h-4 w-4" />
-                        )}
-                        {isMobile && <span className="ml-2">Reset Senha</span>}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="flex-shrink-0"
-                        onClick={() => handleOpenDeleteDialog(teacher)}
-                        title="Excluir Professor"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        {isMobile && <span className="ml-2">Excluir</span>}
-                      </Button>
-                    </div>
+                      {isMobile && <span className="ml-2">Reset Senha</span>}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="flex-shrink-0"
+                      onClick={() => handleOpenDeleteDialog(teacher)}
+                      title="Excluir Professor"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {isMobile && <span className="ml-2">Excluir</span>}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

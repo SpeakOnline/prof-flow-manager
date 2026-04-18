@@ -238,6 +238,7 @@ export const searchTeachersAdvanced = async (
     p_hour: filters.hour ?? null,
     p_day_of_week_list: filters.dayOfWeekList ?? null,
     p_hour_list: filters.hourList ?? null,
+    p_time_ranges: filters.timeRanges ?? null,
     p_level: filters.level ?? null,
     p_has_certification: filters.hasCertification ?? null,
     p_performance: filters.performance ?? null,

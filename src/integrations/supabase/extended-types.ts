@@ -46,6 +46,7 @@ export interface TeacherSearchFilters {
   hour?: number;
   dayOfWeekList?: number[];
   hourList?: number[];
+  timeRanges?: string[];
   level?: TeacherLevel;
   hasCertification?: boolean;
   performance?: TeacherPerformance;

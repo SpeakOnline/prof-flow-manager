@@ -314,6 +314,7 @@ export type Database = {
           p_day_of_week_list?: number[] | null
           p_hour?: number | null
           p_hour_list?: number[] | null
+          p_time_ranges?: string[] | null
           p_level?: Database["public"]["Enums"]["teacher_level"] | null
           p_has_certification?: boolean | null
           p_performance?: Database["public"]["Enums"]["teacher_performance"] | null
