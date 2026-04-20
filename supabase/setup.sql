@@ -479,25 +479,55 @@ BEGIN
           ) AS d(day_of_week)
           CROSS JOIN unnest(p_time_ranges) AS r(time_range)
           WHERE NOT EXISTS (
-            SELECT 1
-            FROM public.schedules s_multi
-            WHERE s_multi.teacher_id = t.id
-              AND s_multi.status::TEXT = 'livre'
-              AND (d.day_of_week IS NULL OR s_multi.day_of_week = d.day_of_week)
-              AND (
-                (s_multi.hour * 60 + COALESCE(s_multi.minute, 0))
-                <= (
+            WITH RECURSIVE
+            bounds AS (
+              SELECT
+                (
                   split_part(split_part(r.time_range, '-', 1), ':', 1)::INT * 60
                   + split_part(split_part(r.time_range, '-', 1), ':', 2)::INT
-                )
-              )
-              AND (
-                (COALESCE(s_multi.end_hour, s_multi.hour + 1) * 60 + COALESCE(s_multi.end_minute, 0))
-                >= (
+                ) AS range_start,
+                (
                   split_part(split_part(r.time_range, '-', 2), ':', 1)::INT * 60
                   + split_part(split_part(r.time_range, '-', 2), ':', 2)::INT
-                )
-              )
+                ) AS range_end
+            ),
+            intervals AS (
+              SELECT
+                GREATEST(
+                  (s_multi.hour * 60 + COALESCE(s_multi.minute, 0)),
+                  b.range_start
+                ) AS interval_start,
+                LEAST(
+                  (COALESCE(s_multi.end_hour, s_multi.hour + 1) * 60 + COALESCE(s_multi.end_minute, 0)),
+                  b.range_end
+                ) AS interval_end
+              FROM public.schedules s_multi
+              CROSS JOIN bounds b
+              WHERE s_multi.teacher_id = t.id
+                AND s_multi.status::TEXT = 'livre'
+                AND (d.day_of_week IS NULL OR s_multi.day_of_week = d.day_of_week)
+                AND (COALESCE(s_multi.end_hour, s_multi.hour + 1) * 60 + COALESCE(s_multi.end_minute, 0)) > b.range_start
+                AND (s_multi.hour * 60 + COALESCE(s_multi.minute, 0)) < b.range_end
+            ),
+            coverage AS (
+              SELECT i.interval_end AS covered_end
+              FROM intervals i
+              CROSS JOIN bounds b
+              WHERE i.interval_start <= b.range_start
+
+              UNION
+
+              SELECT GREATEST(c.covered_end, i.interval_end) AS covered_end
+              FROM coverage c
+              JOIN intervals i
+                ON i.interval_start <= c.covered_end
+              WHERE i.interval_end > c.covered_end
+            )
+            SELECT 1
+            FROM coverage
+            CROSS JOIN bounds b
+            WHERE coverage.covered_end >= b.range_end
+            LIMIT 1
           )
         )
       )
