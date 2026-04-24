@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/dialog";
 import { Users, Search, UserPlus, Eye, Calendar, Trash2, KeyRound } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/components/Auth/AuthContext";
+import { useSpecialListsByType } from "@/hooks/useSpecialLists";
 import { supabase } from "@/integrations/supabase/client";
 import { EnhancedTeacherForm } from "@/components/Teachers/EnhancedTeacherForm";
 import type { Teacher } from "@/integrations/supabase/extended-types";
@@ -45,7 +47,15 @@ export const TeachersView = ({ onViewSchedule }: TeachersViewProps) => {
   const [resettingTeacherId, setResettingTeacherId] = useState<string | null>(null);
   const [deletingTeacherId, setDeletingTeacherId] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
   const { toast } = useToast();
+  const { data: restrictedTeachers = [] } = useSpecialListsByType('restricted', isAdmin);
+
+  const restrictedTeacherIds = useMemo(
+    () => new Set(restrictedTeachers.map((entry) => entry.teacher_id)),
+    [restrictedTeachers]
+  );
 
   const loadTeachers = useCallback(async () => {
     try {
@@ -234,6 +244,12 @@ export const TeachersView = ({ onViewSchedule }: TeachersViewProps) => {
                     <Badge className={getLevelColor(teacher.level)}>
                       {TEACHER_LEVEL_LABELS[teacher.level]}
                     </Badge>
+
+                    {isAdmin && restrictedTeacherIds.has(teacher.id) && (
+                      <Badge variant="destructive">
+                        Bloqueado
+                      </Badge>
+                    )}
                     
                     {teacher.has_international_certification && (
                       <Badge variant="secondary">

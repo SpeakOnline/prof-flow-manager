@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ScheduleGrid, ScheduleSlot } from "@/components/Schedule/ScheduleGrid";
+import { ScheduleGrid, type ScheduleSlot } from "@/components/Schedule/ScheduleGrid";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import { useTeacherSchedules, useBookSchedule, useFreeSchedule, useMarkScheduleU
 import { useTeachers, useTeacher, useTeacherByUserId } from "@/hooks/useTeachers";
 import { useTeacherRestriction } from "@/hooks/useSpecialLists";
 import { ensureTeacherProfileForUser, updateLastScheduleAccess } from "@/services/teacher.service";
-import { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
 
 type Schedule = Database['public']['Tables']['schedules']['Row'];
 
@@ -48,16 +48,6 @@ const mapStatus = (status: Schedule['status']): ScheduleSlot['status'] => {
   return statusMap[status] || 'free';
 };
 
-// Mapeamento reverso de status
-const mapStatusReverse = (status: ScheduleSlot['status']): Schedule['status'] => {
-  const statusMap: Record<ScheduleSlot['status'], Schedule['status']> = {
-    'free': 'livre',
-    'occupied': 'com_aluno',
-    'unavailable': 'indisponivel',
-  };
-  return statusMap[status];
-};
-
 // Mapeamento de dia da semana para número
 const dayKeyToNumber: Record<string, number> = {
   'sunday': 0,
@@ -82,9 +72,6 @@ const dayLabels: Record<string, string> = {
 
 // Ordem dos dias para exibição
 const daysOrder = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-
-// Para compatibilidade com código existente
-const availableHours = Array.from({ length: 15 }, (_, i) => i + 8);
 
 export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onBack }: ScheduleViewProps) => {
   const [selectedSlot, setSelectedSlot] = useState<{ day: string; slot: ScheduleSlot; scheduleId: string } | null>(null);
@@ -197,15 +184,22 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
 
   // Fetch teachers list (for admin to select teacher)
   const { data: teachers } = useTeachers();
+  const canSeeRestrictionWarnings = user.role === 'admin';
 
   // Verifica se o professor efetivo está na lista de restrição
-  const { data: teacherRestriction } = useTeacherRestriction(effectiveTeacherId || '');
+  const { data: teacherRestriction } = useTeacherRestriction(
+    effectiveTeacherId || '',
+    canSeeRestrictionWarnings,
+  );
 
   // Verifica restrição para o professor selecionado no formulário de criação (admin sem professor pré-selecionado)
   const createFormTeacherId = user.role === 'admin' && !selectedTeacherId
     ? (createForm.teacherId || currentTeacher?.id || '')
     : '';
-  const { data: createFormTeacherRestriction } = useTeacherRestriction(createFormTeacherId);
+  const { data: createFormTeacherRestriction } = useTeacherRestriction(
+    createFormTeacherId,
+    canSeeRestrictionWarnings,
+  );
 
   // Restrição ativa: usa a do formulário de criação (quando admin seleciona professor no form) ou a do professor efetivo
   const activeCreateRestriction = createFormTeacherId ? createFormTeacherRestriction : teacherRestriction;
@@ -362,24 +356,6 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
     setCreateForm(prev => ({
       ...prev,
       timeSlots: prev.timeSlots.filter(t => t !== timeLabel)
-    }));
-  };
-
-  const handleToggleTimeSlot = (timeLabel: string) => {
-    setCreateForm(prev => ({
-      ...prev,
-      timeSlots: prev.timeSlots.includes(timeLabel)
-        ? prev.timeSlots.filter(t => t !== timeLabel)
-        : [...prev.timeSlots, timeLabel]
-    }));
-  };
-
-  const handleToggleHour = (hour: number) => {
-    setCreateForm(prev => ({
-      ...prev,
-      hours: prev.hours.includes(hour)
-        ? prev.hours.filter(h => h !== hour)
-        : [...prev.hours, hour]
     }));
   };
 
@@ -554,7 +530,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
                 </Select>
               </div>
 
-              {editForm.status === 'occupied' && teacherRestriction && (
+              {canSeeRestrictionWarnings && editForm.status === 'occupied' && teacherRestriction && (
                 <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
                   <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                   <div>
@@ -880,7 +856,7 @@ export const ScheduleView = ({ user, selectedTeacherId, selectedTeacherName, onB
             </div>
 
             {/* Alerta de restrição do professor */}
-            {createForm.status === 'com_aluno' && activeCreateRestriction && (
+            {canSeeRestrictionWarnings && createForm.status === 'com_aluno' && activeCreateRestriction && (
               <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
                 <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                 <div>

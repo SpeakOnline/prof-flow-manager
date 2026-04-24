@@ -31,10 +31,11 @@ type SpecialListUpdate = Database['public']['Tables']['special_lists']['Update']
  * const { data: restrictedTeachers, isLoading } = useSpecialListsByType('restricted');
  * ```
  */
-export function useSpecialListsByType(listType: string) {
+export function useSpecialListsByType(listType: string, enabled = true) {
   return useQuery({
     queryKey: ['special_lists', listType],
     queryFn: () => getSpecialListsByType(listType),
+    enabled,
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
 }
@@ -155,11 +156,11 @@ export function useIsTeacherInList(teacherId: string, listType: string) {
  * if (restriction) { // professor está na lista restrita }
  * ```
  */
-export function useTeacherRestriction(teacherId: string) {
+export function useTeacherRestriction(teacherId: string, enabled = true) {
   return useQuery({
     queryKey: ['special_lists', 'restriction', teacherId],
     queryFn: () => getTeacherSpecialListEntry(teacherId, 'restricted'),
-    enabled: !!teacherId,
+    enabled: enabled && !!teacherId,
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
 }

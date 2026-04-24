@@ -38,6 +38,7 @@ import {
 } from '@/integrations/supabase/extended-types';
 import { Search, Loader2, Calendar, Plus, X } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthContext';
+import { useSpecialListsByType } from '@/hooks/useSpecialLists';
 
 interface TeacherAdvancedSearchProps {
   onViewSchedule?: (teacherId: string, teacherName: string) => void;
@@ -71,6 +72,8 @@ export const TeacherAdvancedSearch = ({ onViewSchedule }: TeacherAdvancedSearchP
   const { role } = useAuth();
 
   const isAdmin = role === 'admin';
+  const { data: restrictedTeachers = [] } = useSpecialListsByType('restricted', isAdmin);
+  const restrictedTeacherIds = new Set(restrictedTeachers.map((entry) => entry.teacher_id));
 
   useEffect(() => {
     const loadLessonTypes = async () => {
@@ -428,6 +431,11 @@ export const TeacherAdvancedSearch = ({ onViewSchedule }: TeacherAdvancedSearchP
                     <div className="flex items-start gap-2">
                       <div className="text-right">
                         <Badge>{TEACHER_LEVEL_LABELS[teacher.level]}</Badge>
+                        {isAdmin && restrictedTeacherIds.has(teacher.id) && (
+                          <Badge variant="destructive" className="ml-2">
+                            Bloqueado
+                          </Badge>
+                        )}
                         {teacher.has_international_certification && (
                           <Badge variant="secondary" className="ml-2">
                             Certificado
