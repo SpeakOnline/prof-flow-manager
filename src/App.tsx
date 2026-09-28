@@ -8,6 +8,7 @@ import { AuthProvider } from "@/components/Auth/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import StudentSchedule from "./pages/StudentSchedule";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,6 +30,7 @@ const App = ({ children }: { children?: React.ReactNode }) => (
               <BrowserRouter>
                 <Routes>
                   <Route path="/" element={<Index />} />
+                  <Route path="/alunos/agenda" element={<StudentSchedule />} />
                   <Route path="/privacidade" element={<PrivacyPolicy />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
