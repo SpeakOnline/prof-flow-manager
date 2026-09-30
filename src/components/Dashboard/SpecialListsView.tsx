@@ -14,7 +14,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Star, Shield, Plus, Trash2, Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Star, Shield, Plus, Trash2, Check, ChevronsUpDown, Loader2, Mic } from "lucide-react";
 import { useTeachers } from "@/hooks/useTeachers";
 import {
   useSpecialListsByType,
@@ -28,13 +28,14 @@ export const SpecialListsView = () => {
   const { data: teachers = [], isLoading: isLoadingTeachers } = useTeachers();
   const { data: restrictedTeachers = [], isLoading: isLoadingRestricted } = useSpecialListsByType('restricted');
   const { data: bestTeachers = [], isLoading: isLoadingBest } = useSpecialListsByType('best');
+  const { data: destraveFalaTeachers = [], isLoading: isLoadingDestraveFala } = useSpecialListsByType('destrave_fale');
   
   // Mutations
   const createEntry = useCreateSpecialListEntry();
   const deleteEntry = useDeleteSpecialListEntry();
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [dialogType, setDialogType] = useState<'restricted' | 'best'>('restricted');
+  const [dialogType, setDialogType] = useState<'restricted' | 'best' | 'destrave_fale'>('restricted');
   const [teacherComboOpen, setTeacherComboOpen] = useState(false);
   const [formData, setFormData] = useState({
     teacherId: '',
@@ -45,17 +46,19 @@ export const SpecialListsView = () => {
   const availableTeachers = useMemo(() => {
     const existingIds = dialogType === 'restricted' 
       ? restrictedTeachers.map(t => t.teacher_id)
-      : bestTeachers.map(t => t.teacher_id);
+      : dialogType === 'best'
+      ? bestTeachers.map(t => t.teacher_id)
+      : destraveFalaTeachers.map(t => t.teacher_id);
     
     return teachers.filter(t => !existingIds.includes(t.id));
-  }, [teachers, restrictedTeachers, bestTeachers, dialogType]);
+  }, [teachers, restrictedTeachers, bestTeachers, destraveFalaTeachers, dialogType]);
 
   // Obter nome do professor selecionado
   const selectedTeacher = useMemo(() => {
     return teachers.find(t => t.id === formData.teacherId);
   }, [teachers, formData.teacherId]);
 
-  const handleAdd = (type: 'restricted' | 'best') => {
+  const handleAdd = (type: 'restricted' | 'best' | 'destrave_fale') => {
     setDialogType(type);
     setFormData({ teacherId: '', observation: '' });
     setTeacherComboOpen(false);
@@ -79,8 +82,8 @@ export const SpecialListsView = () => {
     await deleteEntry.mutateAsync(id);
   };
 
-  const renderTeacherList = (entries: typeof restrictedTeachers, type: 'restricted' | 'best') => {
-    const isLoading = type === 'restricted' ? isLoadingRestricted : isLoadingBest;
+  const renderTeacherList = (entries: typeof restrictedTeachers, type: 'restricted' | 'best' | 'destrave_fale') => {
+    const isLoading = type === 'restricted' ? isLoadingRestricted : type === 'best' ? isLoadingBest : isLoadingDestraveFala;
     
     if (isLoading) {
       return (
@@ -147,7 +150,7 @@ export const SpecialListsView = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {/* Lista de Restrição */}
         <Card>
           <CardHeader>
@@ -193,6 +196,29 @@ export const SpecialListsView = () => {
             {renderTeacherList(bestTeachers, 'best')}
           </CardContent>
         </Card>
+
+        {/* Programa Destrave Fala */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Mic className="h-5 w-5 text-primary" />
+                Programa Destrave & Fale
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleAdd('destrave_fale')}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {renderTeacherList(destraveFalaTeachers, 'destrave_fale')}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Dialog para Adicionar Professor */}
@@ -200,7 +226,11 @@ export const SpecialListsView = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Adicionar à Lista {dialogType === 'restricted' ? 'de Restrição' : 'dos Melhores'}
+              {dialogType === 'restricted' 
+                ? 'Adicionar à Lista de Restrição'
+                : dialogType === 'best'
+                ? 'Adicionar à Lista dos Melhores'
+                : 'Adicionar ao Programa Destrave Fala'}
             </DialogTitle>
           </DialogHeader>
           

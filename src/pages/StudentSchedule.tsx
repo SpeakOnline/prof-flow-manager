@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Users, Search, MessageCircle, HelpCircle, Clock, Calendar } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { supabase } from "@/integrations/supabase/client";
+import { supabasePublic } from "@/integrations/supabase/client";
 import type { Teacher } from "@/integrations/supabase/extended-types";
 import { TEACHER_LEVEL_LABELS } from "@/integrations/supabase/extended-types";
 import { Loader2 } from "lucide-react";
@@ -44,6 +44,7 @@ const StudentSchedule = () => {
   const [teacherSchedules, setTeacherSchedules] = useState<Record<string, Schedule[]>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingSchedules, setLoadingSchedules] = useState<Record<string, boolean>>({});
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -57,7 +58,7 @@ const StudentSchedule = () => {
       setLoading(true);
       
       // Usar a função RPC para buscar professores disponíveis com contagem de horários
-      const { data, error } = await supabase
+      const { data, error } = await supabasePublic
         .rpc('get_available_teachers');
 
       if (error) throw error;
@@ -70,10 +71,7 @@ const StudentSchedule = () => {
       
       setTeachers(teachersWithCount);
       
-      // Carregar horários de todos os professores disponíveis
-      for (const teacher of teachersWithCount) {
-        await loadTeacherSchedules(teacher.id);
-      }
+      // Não carregar horários antecipadamente - usar lazy loading quando clicar no professor
     } catch (error) {
       console.error('Error loading teachers:', error);
       toast({
@@ -89,8 +87,10 @@ const StudentSchedule = () => {
 
   const loadTeacherSchedules = async (teacherId: string) => {
     try {
+      setLoadingSchedules(prev => ({ ...prev, [teacherId]: true }));
+      
       // Usar a função RPC para buscar horários disponíveis
-      const { data, error } = await supabase
+      const { data, error } = await supabasePublic
         .rpc('get_teacher_available_schedules', { teacher_id_param: teacherId });
 
       if (error) throw error;
@@ -100,6 +100,13 @@ const StudentSchedule = () => {
       }));
     } catch (error) {
       console.error('Error loading schedules:', error);
+      toast({
+        title: 'Erro ao carregar horários',
+        description: 'Não foi possível carregar os horários do professor.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingSchedules(prev => ({ ...prev, [teacherId]: false }));
     }
   };
 
@@ -137,10 +144,14 @@ const StudentSchedule = () => {
     return `${startTime} - ${endTime}`;
   };
 
-  const handleTeacherClick = (teacher: Teacher) => {
+  const handleTeacherClick = async (teacher: Teacher) => {
     setSelectedTeacher(teacher);
     setIsDialogOpen(true);
-    // Horários já foram carregados no loadTeachers
+    
+    // Carregar horários sob demanda (lazy loading)
+    if (!teacherSchedules[teacher.id]) {
+      await loadTeacherSchedules(teacher.id);
+    }
   };
 
   const handleWhatsAppTeacher = () => {
@@ -358,7 +369,11 @@ const StudentSchedule = () => {
                     Horários Disponíveis
                   </h4>
                   
-                  {teacherSchedules[selectedTeacher.id]?.length === 0 ? (
+                  {loadingSchedules[selectedTeacher.id] ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : teacherSchedules[selectedTeacher.id]?.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       Nenhum horário disponível no momento.
                     </p>
