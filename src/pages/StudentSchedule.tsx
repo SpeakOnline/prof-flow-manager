@@ -176,14 +176,14 @@ const StudentSchedule = () => {
       cleanPhone = '55' + cleanPhone;
     }
     
-    const message = encodeURIComponent(`Olá! Gostaria de agendar uma aula com você.`);
+    const message = encodeURIComponent(`Sou aluno do Destrave e Fale - Quero a minha mentoria!`);
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
     
     window.open(whatsappUrl, '_blank');
   };
 
   const handleWhatsAppCoordination = () => {
-    const message = encodeURIComponent('Olá! Tenho uma dúvida sobre as aulas.');
+    const message = encodeURIComponent('Olá! Tenho uma dúvida sobre as aulas do destrave e fale.');
     const whatsappUrl = `https://wa.me/${coordinationWhatsApp}?text=${message}`;
     
     window.open(whatsappUrl, '_blank');
